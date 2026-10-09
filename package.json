@@ -1,0 +1,45 @@
+{
+  "name": "code-editor",
+  "version": "1.0.0",
+  "description": "HTML/CSS/JS Code Editor for Windows",
+  "main": "src/main.js",
+  "homepage": "./",
+  "author": "Code Editor",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4",
+    "electron-is-dev": "^2.0.0"
+  },
+  "build": {
+    "appId": "com.codeeditor.app",
+    "productName": "Code Editor",
+    "files": [
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
