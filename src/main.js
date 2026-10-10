@@ -1,6 +1,5 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
-const isDev = require('electron-is-dev');
 
 let mainWindow;
 
@@ -15,19 +14,11 @@ function createWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js')
-    },
-    icon: path.join(__dirname, 'assets', 'icon.png')
+    }
   });
 
-  const startUrl = isDev
-    ? 'http://localhost:3000'
-    : `file://${path.join(__dirname, '../build/index.html')}`;
-
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
-
-  if (isDev) {
-    mainWindow.webContents.openDevTools();
-  }
+  const indexPath = path.join(__dirname, 'index.html');
+  mainWindow.loadFile(indexPath);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
