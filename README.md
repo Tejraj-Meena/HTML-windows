@@ -1,65 +1,49 @@
 # Code Editor - Windows Desktop App
 
-A full-featured HTML/CSS/JS code editor for Windows with file import, undo/redo, and live preview.
-
-## Installation
-
-### Download Pre-built Installer
-1. Download `CodeEditor-Setup-1.0.0.exe` from Releases
-2. Run the installer
-3. Follow the installation wizard
-4. Launch from Start Menu or Desktop shortcut
-
-### Or Build It Yourself
-
-**Requirements:**
-- Node.js 14+
-- Git
-
-**Steps:**
-1. Clone this repository
-   ```bash
-   git clone https://github.com/YOUR-USERNAME/code-editor-windows.git
-   cd code-editor-windows
-   ```
-
-2. Install dependencies
-   ```bash
-   npm install
-   ```
-
-3. Build the Windows installer
-   ```bash
-   npm run build:win
-   ```
-
-4. The `.exe` installer will be in the `dist/` folder
+A full-featured HTML/CSS/JS code editor for Windows that installs via .exe
 
 ## Features
 
-- **Multi-file support** - Create and edit multiple HTML, CSS, and JS files
-- **File import** - Pick multiple `.html`, `.css`, `.js` files at once
-- **Image support** - Import images and use them in your HTML
-- **Undo/Redo** - Full undo/redo history
-- **Auto-closing tags** - HTML tags close automatically
-- **Live preview** - See your code run in real-time
-- **Dark mode** - Toggle between light and dark themes
-- **Download project** - Export entire project as `.zip`
+- Multi-file editing (HTML, CSS, JS)
+- Import multiple files at once
+- Undo/Redo functionality
+- Auto-closing tags
+- Live preview with images
+- Download projects as ZIP
+- Dark mode support
+- Works offline
+
+## Installation
+
+### Option 1: Download Pre-built Installer (Easiest)
+1. Go to Releases
+2. Download `CodeEditor-Setup-1.0.0.exe`
+3. Run the installer
+4. Follow the wizard
+5. Launch from Start Menu
+
+### Option 2: Build on GitHub
+1. Push to GitHub
+2. Go to Actions tab
+3. Click "Build Windows EXE"
+4. Click "Run workflow"
+5. Wait 10 minutes for build
+6. Download from Artifacts
+
+### Option 3: Build on Your Computer
+1. Install Node.js from nodejs.org
+2. Open Command Prompt in this folder
+3. Run: `npm install`
+4. Run: `npm run build`
+5. Find .exe in `dist/` folder
 
 ## Usage
 
 1. Launch the app
-2. Click import buttons to add files
+2. Use ðŸ“„ HTML, ðŸŽ¨ CSS, âš™ï¸ JS, ðŸ–¼ï¸ Images buttons to import files
 3. Edit code in the left panel
 4. See live preview on the right
-5. Download your project as ZIP
-
-## Development
-
-Run in development mode:
-```bash
-npm run dev
-```
+5. Click Download to save your project
 
 ## License
 
