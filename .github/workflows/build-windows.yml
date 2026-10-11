@@ -27,5 +27,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CodeEditor-Setup
-          path: dist/CodeEditor-Setup-1.0.0.exe
+          path: dist/**/*.exe
           retention-days: 30
