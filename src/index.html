@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Code Editor - Trusted</title>
+<title>Code Editor</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f5f5f6;--panel:#fff;--bar:#f0f1f4;--line:#dfe2e8;--text:#24272e;--muted:#7b8190;--gutter:#f7f8fa;--accent:#e2582b;--ok:#2f9e4f;--err:#d23a3a;--warn:#b7791f;
@@ -37,6 +37,7 @@ h1{font-size:16px;font-weight:500;margin:0}
 .btn,select{font:12px "JetBrains Mono",monospace;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;white-space:nowrap}
 .btn:hover,select:hover{border-color:var(--muted)}
 .btn.sure{border-color:var(--err);color:var(--err)}
+.btn.dirty{border-color:var(--accent);color:var(--accent)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .live{font:11px "JetBrains Mono",monospace;color:var(--muted);display:flex;align-items:center;gap:7px;margin:0 4px}
 .live b{width:8px;height:8px;border-radius:50%;background:var(--ok)}
@@ -57,16 +58,24 @@ iframe{border:0;width:100%;height:100%;background:#fff;display:block}
 .e{color:var(--err)}.w{color:var(--warn)}.i{color:var(--ok)}
 .cbar{display:flex;justify-content:space-between;padding:4px 10px;background:var(--bar);font:11px "JetBrains Mono",monospace;color:var(--muted);flex:none}
 .cbar button{border:0;background:none;color:var(--muted);font:inherit;cursor:pointer}
-#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--text);color:var(--panel);padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:999}
+#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);max-width:90%;text-align:center;background:var(--text);color:var(--panel);padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:999}
 #toast.show{opacity:1}
 input[type="file"]{display:none}
-@media (max-width:760px){.app{flex-direction:column}#div{width:auto;height:6px;cursor:row-resize}.hide-m{display:none}header{flex-direction:column;align-items:flex-start}.hdr-right{width:100%}}
+@media (max-width:760px){
+  .app{flex-direction:column}
+  #div{width:auto;height:6px;cursor:row-resize}
+  .hide-m{display:none}
+  header{flex-direction:column;align-items:flex-start}
+  .hdr-right{width:100%}
+  textarea,.gut{font-size:16px;line-height:22px}
+}
 </style>
 </head>
 <body>
 <header>
-  <div class="hdr-left"><h1>Code Editor ✓</h1></div>
+  <div class="hdr-left"><h1>Code Editor</h1></div>
   <div class="hdr-right">
+    <button class="btn" id="saveb" title="Save (Ctrl+S)">💾 Save</button>
     <button class="btn" id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
     <button class="btn" id="redo" title="Redo (Ctrl+Y)">↷ Redo</button>
     <button class="btn" id="imphtml" title="Select multiple HTML files">📄 HTML</button>
@@ -85,15 +94,16 @@ input[type="file"]{display:none}
   <section class="pane" id="pv">
     <div id="preview-container">
       <div class="bar">
-        <span class="live" id="live"><span>LIVE</span><b></b></span>
+        <span class="live" id="live"><span>PREVIEW</span><b></b></span>
         <select id="page" aria-label="Preview page"></select>
         <span class="sp"></span>
+        <button class="btn" id="runb" title="Run JavaScript and show console output (Ctrl+Enter)">▶ Run</button>
         <button class="btn hide-m" id="lay">Stack</button>
         <button class="btn" id="cons">Console</button>
         <button class="btn" id="dl">Download</button>
         <button class="btn" id="rst">Reset</button>
       </div>
-      <div class="frame"><iframe id="out" title="Preview" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-top-navigation-by-user-activation"></iframe></div>
+      <div class="frame"><iframe id="out" title="Preview" sandbox="allow-scripts allow-modals allow-forms allow-popups"></iframe></div>
     </div>
     <div id="con">
       <div id="con-divider" role="separator"></div>
@@ -115,8 +125,10 @@ input[type="file"]{display:none}
 // ====== CONSTANTS ======
 const SC = '<\/script>';
 const KEY = 'code-editor:v4';
+const THEME_KEY = 'code-editor:v1:theme';
 const VOID_TAGS = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/i;
 const PAIRS = {'(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`'};
+const COL = {html: '#e2582b', css: '#2468d8', js: '#b9650f'};
 
 // ====== STATE ======
 let files = starter();
@@ -125,20 +137,20 @@ let page = 'index.html';
 let images = {};
 let undo = [];
 let redo = [];
-let editting = false;
+let grouping = false;
+let groupTimer;
 
-// ====== DOM REFERENCES ======
-const src = document.getElementById('src');
-const gut = document.getElementById('gut');
-const out = document.getElementById('out');
-const live = document.getElementById('live');
-const log = document.getElementById('log');
-const tabs = document.getElementById('tabs');
+// ====== DOM ======
+const $ = (id) => document.getElementById(id);
+const src = $('src');
+const gut = $('gut');
+const out = $('out');
+const live = $('live');
+const log = $('log');
+const tabs = $('tabs');
 const root = document.documentElement;
 
-// ====== HELPER FUNCTIONS ======
-function $(id) { return document.getElementById(id); }
-
+// ====== HELPERS ======
 function starter() {
   return [
     {name:'index.html',content:'<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>Home</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <nav><a href="index.html">Home</a> <a href="about.html">About</a></nav>\n  <h1>Home page</h1>\n  <p>Test your code here. Create multiple pages and navigate between them.</p>\n  <button id="btn">Click me</button>\n  <p id="count">Clicks: 0</p>\n  <script src="script.js">'+SC+'\n</body>\n</html>'},
@@ -148,108 +160,131 @@ function starter() {
   ];
 }
 
-function save() {
+let dirty = false;
+function updateSaveBtn() {
+  const b = $('saveb');
+  b.classList.toggle('dirty', dirty);
+  b.textContent = dirty ? '💾 Save ●' : '💾 Save';
+  document.title = (dirty ? '* ' : '') + 'Code Editor';
+}
+function markDirty() {
+  if (!dirty) { dirty = true; updateSaveBtn(); }
+}
+// Saving only happens when you press Save (or Ctrl+S). Nothing is saved automatically.
+function saveProject() {
   try {
     localStorage.setItem(KEY, JSON.stringify({files, cur, page, images}));
+    dirty = false;
+    updateSaveBtn();
+    toast('✓ Saved');
   } catch (e) {
-    console.error('Storage error:', e);
+    toast('Could not save. Browser storage may be full.');
   }
 }
+window.addEventListener('beforeunload', (e) => {
+  if (dirty) { e.preventDefault(); e.returnValue = ''; }
+});
 
-function toast(msg) {
+function toast(msg, ms) {
   const t = $('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toast.t);
-  toast.t = setTimeout(() => t.classList.remove('show'), 2200);
+  toast.t = setTimeout(() => t.classList.remove('show'), ms || 2200);
 }
 
 function get(name) {
-  for (let f of files) {
-    if (f.name === name) return f;
-  }
+  for (const f of files) if (f.name === name) return f;
   return null;
 }
-
 function ext(name) {
   const m = name.match(/\.([^.]+)$/);
   return m ? m[1].toLowerCase() : '';
 }
-
-const COL = {html: '#e2582b', css: '#2468d8', js: '#b9650f'};
-
+function htmls() { return files.filter(f => ext(f.name) === 'html'); }
 function lines() {
   const n = src.value.split('\n').length;
-  const a = [];
-  for (let i = 1; i <= n; i++) a.push(i);
-  gut.textContent = a.join('\n');
+  let s = '';
+  for (let i = 1; i <= n; i++) s += (i > 1 ? '\n' : '') + i;
+  gut.textContent = s;
+}
+function setLive(bad) { live.classList.toggle('err', !!bad); }
+const LOG_CAP = 102400; // 100 KB of console output per run
+let logBytes = 0;
+function clearLog() { log.innerHTML = ''; logBytes = 0; }
+function appendLog(cls, text) {
+  const r = document.createElement('div');
+  if (cls) r.className = cls;
+  r.textContent = text;
+  log.appendChild(r);
+  while (log.childElementCount > 300) log.removeChild(log.firstChild);
+  log.scrollTop = log.scrollHeight;
+}
+function addLog(cls, text) {
+  if (cls !== 'e') { // errors always show
+    if (logBytes >= LOG_CAP) return;
+    const room = LOG_CAP - logBytes;
+    const over = text.length > room;
+    if (over) text = text.slice(0, room);
+    logBytes += text.length + 1;
+    appendLog(cls, text);
+    if (over || logBytes >= LOG_CAP) {
+      logBytes = LOG_CAP;
+      appendLog('w', '… output capped at 100 KB. Run again to reset.');
+    }
+    return;
+  }
+  appendLog(cls, text);
+}
+function placeholder(msg) {
+  return '<!DOCTYPE html><meta charset="utf-8"><body style="font-family:system-ui,sans-serif;padding:20px;color:#666">' + msg + '</body>';
 }
 
-function htmls() {
-  return files.filter(f => ext(f.name) === 'html');
-}
-
-// ====== FILE MANAGEMENT ======
+// ====== TABS & FILES ======
 function renderTabs() {
   tabs.innerHTML = '';
-  
+
   files.forEach(f => {
     const b = document.createElement('div');
     b.className = 'tab';
     b.setAttribute('role', 'tab');
     b.tabIndex = 0;
     b.setAttribute('aria-selected', f.name === cur ? 'true' : 'false');
-    
+
     const d = document.createElement('i');
     d.style.background = COL[ext(f.name)] || '#8b93a3';
-    
     const l = document.createElement('span');
     l.textContent = f.name;
-    
     const x = document.createElement('button');
     x.className = 'x';
     x.textContent = '×';
     x.title = 'Delete ' + f.name;
-    
     b.append(d, l, x);
-    
-    b.onclick = () => open(f.name);
-    b.onkeydown = (e) => {
-      if (e.key === 'Enter' && e.target === b) open(f.name);
-    };
-    
-    b.ondblclick = () => {
-      askName(f.name, b, (n) => rename(f.name, n));
-    };
-    
+
+    b.onclick = () => openFile(f.name);
+    b.onkeydown = (e) => { if (e.key === 'Enter' && e.target === b) openFile(f.name); };
+    b.ondblclick = () => askName(f.name, b, (n) => rename(f.name, n));
+
     x.onclick = (e) => {
       e.stopPropagation();
       if (!x.classList.contains('sure')) {
         x.classList.add('sure');
         x.textContent = 'delete?';
-        setTimeout(() => {
-          x.classList.remove('sure');
-          x.textContent = '×';
-        }, 3000);
+        setTimeout(() => { x.classList.remove('sure'); x.textContent = '×'; }, 3000);
         return;
       }
-      
-      if (files.length < 2) {
-        toast('Keep at least one file');
-        return;
-      }
-      
+      if (files.length < 2) { toast('Keep at least one file'); return; }
       files = files.filter(g => g !== f);
       if (cur === f.name) cur = files[0].name;
       fixPage();
-      save();
-      open(cur);
-      run();
+      markDirty();
+      openFile(cur);
+      preview();
     };
-    
+
     tabs.appendChild(b);
   });
-  
+
   const a = document.createElement('button');
   a.className = 'add';
   a.textContent = '+';
@@ -257,25 +292,20 @@ function renderTabs() {
   a.onclick = () => {
     askName('', a, (n) => {
       if (!ext(n)) n += '.html';
-      if (get(n)) {
-        toast(n + ' already exists');
-        return;
-      }
-      
-      const tpl = ext(n) === 'html' 
+      if (get(n)) { toast(n + ' already exists'); return; }
+      const tpl = ext(n) === 'html'
         ? '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>' + n.replace(/\.html$/, '') + '</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>' + n + '</h1>\n</body>\n</html>'
         : '';
-      
       files.push({name: n, content: tpl});
       cur = n;
       fixPage();
-      save();
-      open(cur);
-      run();
+      markDirty();
+      openFile(cur);
+      preview();
     });
   };
   tabs.appendChild(a);
-  
+
   const pg = $('page');
   pg.innerHTML = '';
   htmls().forEach(f => {
@@ -294,19 +324,15 @@ function askName(init, el, cb) {
   el.replaceWith(i);
   i.focus();
   i.select();
-  
+
   let done = false;
   const fin = (ok) => {
     if (done) return;
     done = true;
     const v = i.value.trim().replace(/[\\\/]/g, '');
-    if (ok && v && v !== init) {
-      cb(v);
-    } else {
-      renderTabs();
-    }
+    if (ok && v && v !== init) cb(v);
+    else renderTabs();
   };
-  
   i.onkeydown = (e) => {
     if (e.key === 'Enter') fin(true);
     if (e.key === 'Escape') fin(false);
@@ -315,55 +341,37 @@ function askName(init, el, cb) {
 }
 
 function rename(a, b) {
-  if (get(b)) {
-    toast(b + ' already exists');
-    renderTabs();
-    return;
-  }
-  
   if (!ext(b)) b += '.' + ext(a);
-  
+  if (get(b)) { toast(b + ' already exists'); renderTabs(); return; }
   const f = get(a);
-  if (f) {
-    f.name = b;
-    if (cur === a) cur = b;
-    if (page === a) page = b;
-    fixPage();
-    save();
-    open(cur);
-    run();
-  }
+  if (!f) return;
+  f.name = b;
+  if (cur === a) cur = b;
+  if (page === a) page = b;
+  fixPage();
+  markDirty();
+  openFile(cur);
+  preview();
 }
 
 function fixPage() {
-  const h = htmls();
   if (!get(page) || ext(page) !== 'html') {
+    const h = htmls();
     page = (get('index.html') && 'index.html') || (h[0] && h[0].name) || '';
   }
 }
 
-function open(n) {
+function openFile(n) {
   cur = n;
   const f = get(n);
-  if (f) {
-    src.value = f.content;
-    lines();
-  }
+  if (f) { src.value = f.content; lines(); }
   gut.scrollTop = 0;
   renderTabs();
-  save();
+  
   undo = [];
   redo = [];
+  grouping = false;
   updateHistBtns();
-}
-
-function pushHist() {
-  const f = get(cur);
-  if (f) {
-    undo.push(f.content);
-    redo = [];
-    updateHistBtns();
-  }
 }
 
 function updateHistBtns() {
@@ -371,24 +379,173 @@ function updateHistBtns() {
   $('redo').disabled = redo.length === 0;
 }
 
-// ====== PREVIEW & BUILD ======
-const HOOK = '<scr'+'ipt>(function(){function s(t,a){try{parent.postMessage({__ce:1,t:t,m:Array.prototype.map.call(a,function(x){if(typeof x==="object"){try{return JSON.stringify(x)}catch(e){}}return String(x)}).join(" ")},"*")}catch(e){}}window.open=function(url,target){var n=url.split("/").pop();if(target==="blank"||target==="_blank"){s("nav",[n]);return{close:function(){}}}return window.open(url,target)};["log","info","warn","error"].forEach(function(k){var o=console[k];console[k]=function(){s(k,arguments);o.apply(console,arguments)}});window.addEventListener("error",function(e){s("error",[e.message+" ("+(e.filename?"":"line "+e.lineno)+")"])});window.addEventListener("unhandledrejection",function(e){s("error",["Unhandled: "+e.reason])});document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(!a)return;var h=a.getAttribute("href");if(/^(#|mailto:|tel:|javascript:)/i.test(h))return;e.preventDefault();if(/^(https?:)?\\/\\//i.test(h)){window.open(h,"_blank");return}s("nav",[h])},true)})();'+SC;
+// ====== LOOP GUARD ======
+// Rewrites `while(cond)` to `while(__lg()&&(cond))` and the middle part of
+// `for(a;b;c)` the same way. __lg() (defined in HOOK) throws if the code has
+// run for over 2 seconds without ever yielding to the browser.
+function skipString(s, i) {
+  const q = s[i];
+  let j = i + 1;
+  while (j < s.length && s[j] !== q) { if (s[j] === '\\') j++; j++; }
+  return j + 1;
+}
+function matchParen(s, i) {
+  let d = 0;
+  for (let j = i; j < s.length; j++) {
+    const c = s[j];
+    if (c === '"' || c === "'" || c === '`') { j = skipString(s, j) - 1; continue; }
+    if (c === '(') d++;
+    else if (c === ')') { d--; if (d === 0) return j; }
+  }
+  return -1;
+}
+function splitTop(s) {
+  const parts = [];
+  let d = 0, st = 0;
+  for (let j = 0; j < s.length; j++) {
+    const c = s[j];
+    if (c === '"' || c === "'" || c === '`') { j = skipString(s, j) - 1; continue; }
+    if ('([{'.indexOf(c) > -1) d++;
+    else if (')]}'.indexOf(c) > -1) d--;
+    else if (c === ';' && d === 0) { parts.push(s.slice(st, j)); st = j + 1; }
+  }
+  parts.push(s.slice(st));
+  return parts;
+}
+function guardLoops(js) {
+  const n = js.length;
+  const idRe = /[A-Za-z_$][\w$]*/y;
+  let out = '', i = 0, prev = '';
+  while (i < n) {
+    const c = js[i], d = js[i + 1];
+    if (c === '/' && d === '/') {
+      let j = js.indexOf('\n', i); if (j < 0) j = n;
+      out += js.slice(i, j); i = j; continue;
+    }
+    if (c === '/' && d === '*') {
+      let j = js.indexOf('*/', i + 2); j = j < 0 ? n : j + 2;
+      out += js.slice(i, j); i = j; continue;
+    }
+    if (c === '"' || c === "'" || c === '`') {
+      const j = Math.min(skipString(js, i), n);
+      out += js.slice(i, j); i = j; prev = c; continue;
+    }
+    if (c === '/' && (prev === '' || '(,=:[!&|?{};+-*%<>~^'.indexOf(prev) > -1)) {
+      let j = i + 1, cls = false;
+      while (j < n && js[j] !== '\n') {
+        const e = js[j];
+        if (e === '\\') j++;
+        else if (e === '[') cls = true;
+        else if (e === ']') cls = false;
+        else if (e === '/' && !cls) break;
+        j++;
+      }
+      j = Math.min(j + 1, n);
+      out += js.slice(i, j); i = j; prev = ')'; continue;
+    }
+    if (/[A-Za-z_$]/.test(c)) {
+      idRe.lastIndex = i;
+      const word = idRe.exec(js)[0];
+      if ((word === 'for' || word === 'while') && prev !== '.') {
+        let k = i + word.length, j = k;
+        while (j < n && /\s/.test(js[j])) j++;
+        if (js[j] === '(') {
+          const e = matchParen(js, j);
+          if (e > 0) {
+            const inner = js.slice(j + 1, e);
+            let ni = inner;
+            if (word === 'while') {
+              ni = '__lg()&&(' + inner + ')';
+            } else {
+              const parts = splitTop(inner);
+              if (parts.length === 3) {
+                parts[1] = parts[1].trim() ? '__lg()&&(' + parts[1] + ')' : '__lg()';
+                ni = parts.join(';');
+              }
+            }
+            out += word + js.slice(k, j) + '(' + ni + ')';
+            i = e + 1; prev = ')'; continue;
+          }
+        }
+      }
+      out += word; i += word.length; prev = word[word.length - 1]; continue;
+    }
+    out += c;
+    if (!/\s/.test(c)) prev = c;
+    i++;
+  }
+  return out;
+}
 
+// ====== PREVIEW HOOK (runs inside the preview iframe) ======
+// This function is stringified and injected into the page. Keep it self-contained.
+function hookFn() {
+  var T = Date.now(), C = 0;
+  var sent = 0, errs = 0;
+  function send(t, a) {
+    var m = Array.prototype.map.call(a, function (x) {
+      if (x && typeof x === 'object') { try { return JSON.stringify(x); } catch (e) {} }
+      return String(x);
+    }).join(' ');
+    if (t === 'error') { if (++errs > 50) return; }
+    else if (t !== 'nav' && t !== 'ready') {
+      if (sent >= 102400) return; // 100 KB output cap
+      sent += m.length + 1;
+    }
+    try { parent.postMessage({__ce: 1, t: t, m: m}, '*'); } catch (e) {}
+  }
+  // Loop watchdog: T is refreshed whenever the browser gets a chance to run timers.
+  window.__lg = function () {
+    if ((++C & 63) === 0 && Date.now() - T > 2000) {
+      throw new Error('Infinite loop stopped: code ran over 2 seconds without pausing');
+    }
+    return true;
+  };
+  setInterval(function () { T = Date.now(); }, 250);
+  ['alert', 'confirm', 'prompt'].forEach(function (k) {
+    var o = window[k];
+    window[k] = function () { var r = o.apply(window, arguments); T = Date.now(); return r; };
+  });
+  var _open = window.open;
+  window.open = function (u) {
+    if (u && !/^(https?:)?\/\//i.test(u)) { send('nav', [u]); return null; }
+    return _open.apply(window, arguments);
+  };
+  ['log', 'info', 'warn', 'error'].forEach(function (k) {
+    var o = console[k];
+    console[k] = function () { send(k, arguments); o.apply(console, arguments); };
+  });
+  window.addEventListener('error', function (e) { send('error', [e.message + ' (line ' + e.lineno + ')']); });
+  window.addEventListener('unhandledrejection', function (e) { send('error', ['Unhandled: ' + e.reason]); });
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href]');
+    if (!a) return;
+    var h = a.getAttribute('href');
+    if (/^(#|mailto:|tel:|javascript:)/i.test(h)) return;
+    e.preventDefault();
+    if (/^(https?:)?\/\//i.test(h)) { _open.call(window, h, '_blank'); return; }
+    send('nav', [h]);
+  }, true);
+  document.addEventListener('DOMContentLoaded', function () { T = Date.now(); send('ready', ['']); });
+}
+const HOOK = '<scr' + 'ipt>(' + hookFn.toString() + ')();' + SC;
+
+// ====== BUILD ======
 function norm(h) {
   return h.split('#')[0].split('?')[0].replace(/^(\.?\/)+/, '');
 }
+function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-function build(name, hook) {
+function build(name, hook, scripts) {
   const f = get(name);
-  if (!f) return '<p style="font-family:sans-serif;padding:20px;color:#999">Add an HTML file to see preview.</p>';
-  
+  if (!f) return placeholder('Add an HTML file to see a preview.');
+
   let h = f.content;
-  
   if (!/<(html|body)/i.test(h)) {
     h = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>' + h + '</body></html>';
   }
-  
-  // Load CSS files
+
+  // Inline CSS files
   h = h.replace(/<link\b[^>]*>/gi, (t) => {
     const m = t.match(/href=["']([^"']+)["']/i);
     if (m && /stylesheet/i.test(t)) {
@@ -397,106 +554,132 @@ function build(name, hook) {
     }
     return t;
   });
-  
-  // Load JS files
+
+  // Inline JS files
   h = h.replace(/<script\b([^>]*?)src=["']([^"']+)["']([^>]*)>\s*<\/script>/gi, (t, a, s, b) => {
     const r = get(norm(s));
-    return r ? '<script'+a+b+'>\n' + r.content.replace(/<\/script/gi, '<\\/script') + '\n' + SC : t;
+    return r ? '<script' + a + b + '>\n' + r.content.replace(/<\/script/gi, '<\\/script') + '\n' + SC : t;
   });
-  
-  // Replace image sources
+
+  // Swap in uploaded images (src=, href=, poster=, url())
   Object.keys(images).forEach((k) => {
-    h = h.replace(new RegExp('src=["\']?' + k + '["\']?', 'g'), 'src="' + images[k] + '"');
+    const re = new RegExp('((?:src|href|poster)\\s*=\\s*["\']?|url\\(\\s*["\']?)\\/?(?:[\\w.\\-]+\\/)*' + esc(k) + '(?=["\'\\s)>])', 'gi');
+    h = h.replace(re, (m, p) => p + images[k]);
   });
-  
+
   if (hook) {
-    h = /<head[^>]*>/i.test(h) 
-      ? h.replace(/<head[^>]*>/i, (m) => m + HOOK)
-      : HOOK + h;
+    // Visual-only mode: remove scripts so nothing executes until Run is pressed
+    if (!scripts) h = h.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+
+    // Guard loops in all inline scripts
+    h = h.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (t, a, body) => {
+      if (/\bsrc\s*=/i.test(a)) return t;
+      const ty = (a.match(/\btype\s*=\s*["']?([^"'\s>]+)/i) || [])[1];
+      if (ty && !/^(text\/javascript|application\/javascript|module)$/i.test(ty)) return t;
+      try { return '<script' + a + '>' + guardLoops(body) + SC; } catch (e) { return t; }
+    });
+
+    // Inject the hook as early as possible
+    if (/<head(\s[^>]*)?>/i.test(h)) h = h.replace(/<head(\s[^>]*)?>/i, (m) => m + HOOK);
+    else if (/<html(\s[^>]*)?>/i.test(h)) h = h.replace(/<html(\s[^>]*)?>/i, (m) => m + HOOK);
+    else h = HOOK + h;
   }
-  
   return h;
 }
 
-function run() {
-  live.classList.remove('err');
-  log.innerHTML = '';
+let lastScripts = false;
+let runTimer;
+// render(false): HTML + CSS only, scripts are not executed (automatic).
+// render(true):  also executes JavaScript and clears the console (Run button).
+function render(scripts) {
+  lastScripts = scripts;
+  setLive(false);
+  if (scripts) clearLog();
   try {
-    out.srcdoc = build(page, true);
+    out.srcdoc = build(page, true, scripts);
   } catch (e) {
-    live.classList.add('err');
-    const r = document.createElement('div');
-    r.className = 'e';
-    r.textContent = 'Build error: ' + e.message;
-    log.appendChild(r);
+    setLive(true);
+    addLog('e', 'Build error: ' + e.message);
   }
 }
-
-let tm;
+function run() { render(true); }
+function preview() { render(false); }
 function sched() {
-  clearTimeout(tm);
-  tm = setTimeout(run, 350);
+  clearTimeout(runTimer);
+  runTimer = setTimeout(preview, 350);
 }
 
 window.addEventListener('message', (e) => {
   const d = e.data;
   if (!d || !d.__ce || e.source !== out.contentWindow) return;
-  
+
+  if (d.t === 'ready') return;
   if (d.t === 'nav') {
     const n = norm(d.m);
     if (get(n) && ext(n) === 'html') {
       page = n;
       $('page').value = n;
-      save();
-      run();
+      
+      render(lastScripts);
     } else {
       toast('Page not found: ' + d.m);
-      const r = document.createElement('div');
-      r.className = 'w';
-      r.textContent = 'Navigation error: Page "' + d.m + '" does not exist.';
-      log.appendChild(r);
+      addLog('w', 'Navigation error: page "' + d.m + '" does not exist.');
     }
     return;
   }
-  
-  const r = document.createElement('div');
-  r.textContent = d.m;
-  if (d.t === 'error') {
-    r.className = 'e';
-    live.classList.add('err');
-  } else if (d.t === 'warn') {
-    r.className = 'w';
-  } else if (d.t === 'log' || d.t === 'info') {
-    r.className = 'i';
-  }
-  
-  log.appendChild(r);
-  log.scrollTop = log.scrollHeight;
+  if (d.t === 'error') { setLive(true); addLog('e', d.m); }
+  else if (d.t === 'warn') addLog('w', d.m);
+  else addLog('i', d.m);
 });
 
 // ====== TEXT EDITING ======
-src.addEventListener('input', () => {
-  if (!editting) {
-    pushHist();
-    editting = true;
+// Auto-close tags. Runs from the input event (not keydown) so it also works
+// with mobile/IME keyboards that don't report a real key.
+function inRawText(v, pos) {
+  const before = v.slice(0, pos).toLowerCase();
+  for (const t of ['script', 'style']) {
+    if (before.lastIndexOf('<' + t) > before.lastIndexOf('</' + t)) return true;
   }
+  return before.lastIndexOf('<!--') > before.lastIndexOf('-->');
+}
+function autoCloseTag() {
+  const a = src.selectionStart, v = src.value;
+  if (a !== src.selectionEnd || v[a - 1] !== '>') return;
+  const lt = v.lastIndexOf('<', a - 2);
+  if (lt < 0) return;
+  const seg = v.slice(lt, a - 1);
+  const m = seg.match(/^<([a-zA-Z][\w:.-]*)(\s[^<>]*)?$/);
+  if (!m || /\/\s*$/.test(seg) || VOID_TAGS.test(m[1])) return;
+  if (inRawText(v, lt)) return;
+  const close = '</' + m[1] + '>';
+  if (v.slice(a, a + close.length).toLowerCase() === close.toLowerCase()) return;
+  src.setRangeText(close, a, a, 'start'); // cursor stays between the tags
+}
+
+src.addEventListener('input', (e) => {
   const f = get(cur);
-  if (f) {
-    f.content = src.value;
-    lines();
-    save();
-    sched();
+  if (!f) return;
+  if (e.inputType === 'insertText' && e.data === '>' && ext(cur) === 'html') autoCloseTag();
+  if (!grouping) {
+    undo.push(f.content);
+    if (undo.length > 200) undo.shift();
+    redo = [];
+    grouping = true;
+    updateHistBtns();
   }
+  clearTimeout(groupTimer);
+  groupTimer = setTimeout(() => { grouping = false; }, 700);
+  f.content = src.value;
+  lines();
+  markDirty();
+  sched();
 });
 
-src.addEventListener('scroll', () => {
-  gut.scrollTop = src.scrollTop;
-});
+src.addEventListener('scroll', () => { gut.scrollTop = src.scrollTop; });
 
 src.addEventListener('keydown', (e) => {
-  editting = false;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
-  
+
   const a = src.selectionStart;
   const b = src.selectionEnd;
   const v = src.value;
@@ -504,305 +687,245 @@ src.addEventListener('keydown', (e) => {
   const nx = v.charAt(b);
   const pv = v.charAt(a - 1);
   const isH = ext(cur) === 'html';
-  
-  // Tab to indent
-  if (k === 'Tab') {
+  const fire = () => src.dispatchEvent(new Event('input'));
+
+  // Tab to indent (Shift+Tab leaves the editor)
+  if (k === 'Tab' && !e.shiftKey) {
     e.preventDefault();
     src.setRangeText('  ', a, b, 'end');
-    src.dispatchEvent(new Event('input'));
+    fire();
     return;
   }
-  
+
   // Smart Enter
   if (k === 'Enter') {
     const ls = v.lastIndexOf('\n', a - 1) + 1;
-    const ind = v.slice(ls, a).match(/^\s*/)[0];
     const before = v.slice(ls, a);
+    const ind = before.match(/^\s*/)[0];
     e.preventDefault();
-    
-    if ((/[{(\[]/.test(pv) && /[})\]]/.test(nx)) || 
+    if ((/[{(\[]/.test(pv) && /[})\]]/.test(nx)) ||
         (isH && pv === '>' && v.slice(b, b + 2) === '</')) {
       src.setRangeText('\n' + ind + '  \n' + ind, a, b, 'end');
+      src.selectionStart = src.selectionEnd = a + 1 + ind.length + 2;
     } else {
       src.setRangeText('\n' + ind + (/[{(\[]\s*$/.test(before) ? '  ' : ''), a, b, 'end');
     }
-    src.dispatchEvent(new Event('input'));
+    fire();
     return;
   }
-  
-  // Backspace smart delete
-  if (k === 'Backspace' && a === b) {
-    if (PAIRS[pv] && PAIRS[pv] === nx) {
-      e.preventDefault();
-      src.setRangeText('', a - 1, a + 1, 'end');
-      src.dispatchEvent(new Event('input'));
-      return;
-    }
+
+  // Backspace deletes an empty pair
+  if (k === 'Backspace' && a === b && PAIRS[pv] && PAIRS[pv] === nx) {
+    e.preventDefault();
+    src.setRangeText('', a - 1, a + 1, 'end');
+    fire();
+    return;
   }
-  
-  // Close brackets
+
+  // Type over a closing character
   if (a === b && k.length === 1 && ')]}"\'`'.indexOf(k) > -1 && nx === k) {
     e.preventDefault();
     src.selectionStart = src.selectionEnd = a + 1;
     return;
   }
-  
+
   // Auto pair
   if (PAIRS[k]) {
     if (k === "'" && /\w/.test(pv)) return;
-    
     if (a !== b) {
       e.preventDefault();
       const sel = v.slice(a, b);
       src.setRangeText(k + sel + PAIRS[k], a, b, 'select');
       src.selectionStart = a + 1;
       src.selectionEnd = b + 1;
-      src.dispatchEvent(new Event('input'));
+      fire();
       return;
     }
-    
     if (nx && !/[\s)\]}>,;]/.test(nx)) return;
     e.preventDefault();
     src.setRangeText(k + PAIRS[k], a, b, 'end');
     src.selectionStart = src.selectionEnd = a + 1;
-    src.dispatchEvent(new Event('input'));
+    fire();
     return;
-  }
-  
-  // Auto close HTML tags
-  if (k === '>' && isH && a === b) {
-    const lt = v.lastIndexOf('<', a - 1);
-    const seg = v.slice(lt, a);
-    const m = lt > -1 && seg.match(/^<([a-zA-Z][\w:-]*)(\s[^<>]*)?$/);
-    
-    if (m && !/\/$/.test(seg) && !VOID_TAGS.test(m[1])) {
-      e.preventDefault();
-      src.setRangeText('></' + m[1] + '>', a, b, 'end');
-      src.selectionStart = src.selectionEnd = a + 1;
-    }
   }
 });
 
 document.addEventListener('keydown', (e) => {
   const m = e.ctrlKey || e.metaKey;
-  if (m && e.key.toLowerCase() === 's') {
-    e.preventDefault();
-    download();
-  }
-  if (m && e.key === 'Enter') {
-    e.preventDefault();
-    run();
-  }
-  if (m && e.key === 'z' && !e.shiftKey) {
-    e.preventDefault();
-    doUndo();
-  }
-  if ((m && e.key === 'y') || (m && e.shiftKey && e.key === 'Z')) {
-    e.preventDefault();
-    doRedo();
-  }
+  if (!m) return;
+  const key = e.key.toLowerCase();
+  if (key === 's') { e.preventDefault(); saveProject(); }
+  else if (key === 'enter') { e.preventDefault(); run(); }
+  else if (e.target === src && key === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); }
+  else if (e.target === src && (key === 'y' || (key === 'z' && e.shiftKey))) { e.preventDefault(); doRedo(); }
 });
 
-// ====== UNDO/REDO ======
-function doUndo() {
-  if (undo.length > 0) {
-    const f = get(cur);
-    if (f) {
-      redo.push(f.content);
-      f.content = undo.pop();
-      src.value = f.content;
-      lines();
-      save();
-      run();
-      updateHistBtns();
-    }
-  }
+// ====== UNDO / REDO ======
+function applyHistory(from, to) {
+  const f = get(cur);
+  if (!f || !from.length) return;
+  to.push(f.content);
+  f.content = from.pop();
+  src.value = f.content;
+  grouping = false;
+  lines();
+  markDirty();
+  preview();
+  updateHistBtns();
 }
-
-function doRedo() {
-  if (redo.length > 0) {
-    const f = get(cur);
-    if (f) {
-      undo.push(f.content);
-      f.content = redo.pop();
-      src.value = f.content;
-      lines();
-      save();
-      run();
-      updateHistBtns();
-    }
-  }
-}
-
+function doUndo() { applyHistory(undo, redo); }
+function doRedo() { applyHistory(redo, undo); }
 $('undo').onclick = doUndo;
 $('redo').onclick = doRedo;
 
 // ====== FILE IMPORT ======
-function loadFiles(fi, type) {
-  fi.onchange = (e) => {
-    const files_arr = Array.from(e.target.files);
-    if (files_arr.length === 0) return;
-    
-    let loaded = 0;
-    const total = files_arr.length;
-    
-    files_arr.forEach((file) => {
-      const r = new FileReader();
-      r.onload = (ev) => {
-        const nm = file.name;
-        
-        if (type === 'img') {
-          images[nm] = ev.target.result;
-          loaded++;
-        } else {
-          if (get(nm)) {
-            toast(nm + ' skipped (already exists)');
-            loaded++;
-            return;
-          }
-          files.push({name: nm, content: ev.target.result});
-          loaded++;
-        }
-        
-        if (loaded === total) {
-          if (type === 'img') {
-            toast('✓ Added ' + total + ' image(s)');
-          } else {
-            cur = files_arr[files_arr.length - 1].name;
-            fixPage();
-            save();
-            open(cur);
-            run();
-            toast('✓ Added ' + total + ' file(s)');
-          }
-          save();
-        }
-      };
-      
-      r.onerror = () => {
-        toast('Error loading ' + file.name);
-        loaded++;
-      };
-      
-      if (type === 'img') {
-        r.readAsDataURL(file);
-      } else {
-        r.readAsText(file);
-      }
-    });
-    
-    fi.value = '';
-  };
-  fi.click();
+function readDataURL(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = () => rej(r.error);
+    r.readAsDataURL(file);
+  });
 }
 
-loadFiles($('fileinput'), 'html');
-loadFiles($('fileinput2'), 'css');
-loadFiles($('fileinput3'), 'js');
-$('impimg').onclick = () => loadFiles($('fileinput4'), 'img');
-$('imphtml').onclick = () => $('fileinput').click();
-$('impcss').onclick = () => $('fileinput2').click();
-$('impjs').onclick = () => $('fileinput3').click();
+function bindImport(btn, input, type) {
+  btn.onclick = () => input.click();
+  input.onchange = async () => {
+    const list = Array.from(input.files);
+    input.value = '';
+    if (!list.length) return;
+
+    let added = 0, last = null;
+    for (const file of list) {
+      try {
+        if (type === 'img') {
+          images[file.name] = await readDataURL(file);
+          added++;
+        } else {
+          if (get(file.name)) { toast(file.name + ' skipped (already exists)'); continue; }
+          files.push({name: file.name, content: await file.text()});
+          last = file.name;
+          added++;
+        }
+      } catch (e) {
+        toast('Error loading ' + file.name);
+      }
+    }
+    if (!added) return;
+    if (last) cur = last;
+    fixPage();
+    markDirty();
+    openFile(cur);
+    preview();
+    toast('✓ Added ' + added + (type === 'img' ? ' image(s)' : ' file(s)'));
+  };
+}
+bindImport($('imphtml'), $('fileinput'), 'html');
+bindImport($('impcss'), $('fileinput2'), 'css');
+bindImport($('impjs'), $('fileinput3'), 'js');
+bindImport($('impimg'), $('fileinput4'), 'img');
 
 // ====== DOWNLOAD ======
-function zip(list) {
-  const enc = new TextEncoder();
-  const parts = [];
-  const cd = [];
-  let off = 0;
-  
-  const CT = (function() {
-    const t = [];
-    for (let n = 0; n < 256; n++) {
-      let c = n;
-      for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
-      t[n] = c >>> 0;
-    }
-    return t;
-  })();
-  
-  function crc(b) {
-    let c = ~0;
-    for (let i = 0; i < b.length; i++) c = CT[(c ^ b[i]) & 255] ^ (c >>> 8);
-    return (~c) >>> 0;
+const CRC_TABLE = (function () {
+  const t = [];
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
   }
-  
+  return t;
+})();
+function crc32(b) {
+  let c = ~0;
+  for (let i = 0; i < b.length; i++) c = CRC_TABLE[(c ^ b[i]) & 255] ^ (c >>> 8);
+  return (~c) >>> 0;
+}
+function zip(list) { // list: [{name, data: Uint8Array}]
+  const enc = new TextEncoder();
+  const parts = [], cd = [];
+  let off = 0;
   list.forEach((f) => {
     const nm = enc.encode(f.name);
-    const d = enc.encode(f.content);
-    const c = crc(d);
-    
+    const d = f.data;
+    const c = crc32(d);
+
     const h = new DataView(new ArrayBuffer(30));
     h.setUint32(0, 0x04034b50, true);
     h.setUint16(4, 20, true);
     h.setUint16(6, 0x0800, true);
+    h.setUint16(12, 33, true); // 1980-01-01
     h.setUint32(14, c, true);
     h.setUint32(18, d.length, true);
     h.setUint32(22, d.length, true);
     h.setUint16(26, nm.length, true);
-    
     parts.push(h.buffer, nm, d);
-    
+
     const g = new DataView(new ArrayBuffer(46));
     g.setUint32(0, 0x02014b50, true);
     g.setUint16(4, 20, true);
     g.setUint16(6, 20, true);
     g.setUint16(8, 0x0800, true);
+    g.setUint16(14, 33, true);
     g.setUint32(16, c, true);
     g.setUint32(20, d.length, true);
     g.setUint32(24, d.length, true);
     g.setUint16(28, nm.length, true);
     g.setUint32(42, off, true);
-    
     cd.push(g.buffer, nm);
+
     off += 30 + nm.length + d.length;
   });
-  
+
   let size = 0;
-  cd.forEach((x) => { size += x.byteLength || x.length; });
-  
+  cd.forEach((x) => { size += x.byteLength; });
+
   const e = new DataView(new ArrayBuffer(22));
   e.setUint32(0, 0x06054b50, true);
   e.setUint16(8, list.length, true);
   e.setUint16(10, list.length, true);
   e.setUint32(12, size, true);
   e.setUint32(16, off, true);
-  
+
   return new Blob(parts.concat(cd, [e.buffer]), {type: 'application/zip'});
 }
+function dataUrlBytes(u) {
+  const bin = atob(u.split(',')[1] || '');
+  const a = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return a;
+}
 
-async function download() {
+function download() {
   try {
-    const blob = zip(files);
+    const enc = new TextEncoder();
+    const list = files.map(f => ({name: f.name, data: enc.encode(f.content)}));
+    Object.keys(images).forEach(k => {
+      if (!get(k)) list.push({name: k, data: dataUrlBytes(images[k])});
+    });
+    const url = URL.createObjectURL(zip(list));
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = 'website.zip';
     document.body.appendChild(a);
     a.click();
     a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
     toast('✓ Download started');
   } catch (e) {
-    toast('Error: ' + e.message);
-    live.classList.add('err');
-    const r = document.createElement('div');
-    r.className = 'e';
-    r.textContent = 'Download failed: ' + e.message;
-    log.appendChild(r);
+    toast('Download failed: ' + e.message);
+    setLive(true);
+    addLog('e', 'Download failed: ' + e.message);
   }
 }
-
 $('dl').onclick = download;
 
 // ====== RESET ======
 const rb = $('rst');
-rb.onclick = function() {
+rb.onclick = function () {
   if (!rb.classList.contains('sure')) {
     rb.classList.add('sure');
     rb.textContent = 'Sure?';
-    setTimeout(() => {
-      rb.classList.remove('sure');
-      rb.textContent = 'Reset';
-    }, 3000);
+    setTimeout(() => { rb.classList.remove('sure'); rb.textContent = 'Reset'; }, 3000);
     return;
   }
   rb.classList.remove('sure');
@@ -810,18 +933,17 @@ rb.onclick = function() {
   files = starter();
   cur = page = 'index.html';
   images = {};
-  save();
-  open(cur);
-  run();
-  undo = [];
-  redo = [];
-  updateHistBtns();
-  toast('✓ Reset to starter project');
+  markDirty();
+  openFile(cur);
+  preview();
+  toast('✓ Reset. Press Save to keep it.');
 };
 
 // ====== UI CONTROLS ======
+$('saveb').onclick = saveProject;
+$('runb').onclick = run;
 $('cons').onclick = () => $('con').classList.toggle('off');
-$('clr').onclick = () => { log.innerHTML = ''; };
+$('clr').onclick = clearLog;
 $('lay').onclick = () => {
   const s = $('app').classList.toggle('stack');
   $('lay').textContent = s ? 'Side by side' : 'Stack';
@@ -831,7 +953,11 @@ $('theme').onclick = () => {
   const dk = getComputedStyle(root).getPropertyValue('--bg').trim() === '#15171b';
   const n = dk ? 'light' : 'dark';
   root.setAttribute('data-theme', n);
-  try { localStorage.setItem('code-editor:v1:theme', n); } catch (e) {}
+  try { localStorage.setItem(THEME_KEY, n); } catch (e) {}
+};
+$('page').onchange = function () {
+  page = this.value;
+  preview();
 };
 
 // ====== RESIZABLE PANES ======
@@ -849,62 +975,48 @@ dv.addEventListener('pointermove', (e) => {
   const p = v ? (e.clientY - r.top) / r.height : (e.clientX - r.left) / r.width;
   $('ed').style.flex = '0 0 ' + Math.max(0.15, Math.min(0.85, p)) * 100 + '%';
 });
-dv.addEventListener('pointerup', () => {
-  drag = false;
-  out.style.pointerEvents = '';
-  editting = false;
-});
+const endDrag = () => { drag = false; out.style.pointerEvents = ''; };
+dv.addEventListener('pointerup', endDrag);
+dv.addEventListener('pointercancel', endDrag);
 
-// ====== RESIZABLE CONSOLE ======
 const cdiv = $('con-divider');
 let cdrag = false;
-cdiv.addEventListener('pointerdown', (e) => {
-  cdrag = true;
-  cdiv.setPointerCapture(e.pointerId);
-});
+cdiv.addEventListener('pointerdown', (e) => { cdrag = true; cdiv.setPointerCapture(e.pointerId); });
 cdiv.addEventListener('pointermove', (e) => {
   if (!cdrag) return;
   const r = $('con').parentElement.getBoundingClientRect();
   const p = (r.bottom - e.clientY) / r.height;
   $('con').style.flex = '0 0 ' + Math.max(0.1, Math.min(0.8, p)) * 100 + '%';
 });
-cdiv.addEventListener('pointerup', () => {
-  cdrag = false;
-});
-
-// ====== PAGE SELECT ======
-$('page').onchange = function() {
-  page = this.value;
-  save();
-  run();
-};
+cdiv.addEventListener('pointerup', () => { cdrag = false; });
+cdiv.addEventListener('pointercancel', () => { cdrag = false; });
 
 // ====== LOAD FROM STORAGE ======
 try {
   const s = localStorage.getItem(KEY);
   if (s) {
     const p = JSON.parse(s);
-    if (p.files && p.files.length) {
+    if (p && Array.isArray(p.files) && p.files.length &&
+        p.files.every(f => f && typeof f.name === 'string' && typeof f.content === 'string')) {
       files = p.files;
       cur = p.cur;
       page = p.page;
-      images = p.images || {};
+      images = p.images && typeof p.images === 'object' ? p.images : {};
     }
   }
-  const t = localStorage.getItem('code-editor:v1:theme');
+  const t = localStorage.getItem(THEME_KEY);
   if (t) root.setAttribute('data-theme', t);
 } catch (e) {
   console.error('Storage load error:', e);
 }
 
-// ====== INITIALIZE ======
+// ====== START ======
 if (!get(cur)) cur = files[0].name;
 fixPage();
-open(cur);
-run();
-updateHistBtns();
-toast('✓ Editor ready. You can trust this.');
+openFile(cur);
 
+// The page preview renders on its own. JavaScript only runs when you press Run.
+preview();
 })();
 </script>
 </body>
