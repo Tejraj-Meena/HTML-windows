@@ -1,24 +1,38 @@
 {
   "name": "code-editor",
   "version": "1.0.0",
-  "description": "Code Editor",
+  "description": "HTML/CSS/JS Code Editor for Windows",
   "main": "src/main.js",
-  "author": "You",
+  "author": "Code Editor",
+  "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win portable --publish never",
-    "build:installer": "electron-builder --win nsis --publish never"
+    "build": "electron-builder --win --publish never"
   },
   "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
   },
   "build": {
-    "appId": "com.local.codeeditor",
+    "appId": "com.codeeditor.app",
     "productName": "Code Editor",
-    "files": ["src/**/*"],
-    "win": { "target": ["portable"] },
-    "portable": { "artifactName": "Code-Editor.exe" },
-    "nsis": { "artifactName": "Code-Editor-Setup.exe" }
+    "files": [
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

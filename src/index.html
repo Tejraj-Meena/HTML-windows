@@ -18,6 +18,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:8px
 h1{font-size:16px;font-weight:500;margin:0}
 .hdr-left{display:flex;align-items:center;gap:12px;flex:1;min-width:200px}
 .hdr-right{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#savest{font:11px "JetBrains Mono",monospace;color:var(--muted)}
+#savest.unsaved{color:var(--warn)}
 .app{flex:1;min-height:0;margin:0 16px 16px;border:1px solid var(--line);border-radius:10px;background:var(--panel);display:flex;overflow:hidden}
 .app.stack{flex-direction:column}
 .pane{display:flex;flex-direction:column;min-width:0;min-height:0}
@@ -37,8 +39,10 @@ h1{font-size:16px;font-weight:500;margin:0}
 .btn,select{font:12px "JetBrains Mono",monospace;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;white-space:nowrap}
 .btn:hover,select:hover{border-color:var(--muted)}
 .btn.sure{border-color:var(--err);color:var(--err)}
-.btn.dirty{border-color:var(--accent);color:var(--accent)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.primary.dirty{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
 .live{font:11px "JetBrains Mono",monospace;color:var(--muted);display:flex;align-items:center;gap:7px;margin:0 4px}
 .live b{width:8px;height:8px;border-radius:50%;background:var(--ok)}
 .live.err b{background:var(--err)}
@@ -47,35 +51,31 @@ h1{font-size:16px;font-weight:500;margin:0}
 textarea{flex:1;min-width:0;border:0;outline:0;resize:none;background:var(--panel);color:var(--text);font:13px/20px "JetBrains Mono",monospace;padding:8px 12px;tab-size:2;white-space:pre;overflow:auto}
 #div{flex:none;width:6px;background:var(--line);cursor:col-resize;touch-action:none}
 .app.stack #div{width:auto;height:6px;cursor:row-resize}
-#preview-container{flex:1;min-height:0;display:flex;flex-direction:column}
+#preview-container{flex:1;min-height:60px;display:flex;flex-direction:column}
 .frame{flex:1;min-height:0;background:#fff}
 iframe{border:0;width:100%;height:100%;background:#fff;display:block}
-#con{flex:none;height:130px;border-top:1px solid var(--line);display:flex;flex-direction:column}
+#runbar{display:flex;align-items:center;gap:6px;background:var(--bar);border-top:1px solid var(--line);padding:0 10px;height:40px;flex:none}
+#con{flex:none;height:150px;display:flex;flex-direction:column;min-height:0}
 #con.off{display:none}
-#con-divider{width:100%;height:6px;background:var(--line);cursor:row-resize;touch-action:none;flex:none}
+#con-divider{width:100%;height:10px;background:var(--line);cursor:row-resize;touch-action:none;flex:none;position:relative}
+#con-divider::after{content:"";position:absolute;left:50%;top:50%;width:36px;height:3px;margin:-1.5px 0 0 -18px;border-radius:2px;background:var(--muted);opacity:.6}
+#con-divider:hover::after,#div:hover{opacity:1}
 #log{flex:1;min-height:0;overflow:auto;font:12px/1.5 "JetBrains Mono",monospace;padding:6px 12px}
 #log div{border-bottom:1px solid var(--line);padding:2px 0;white-space:pre-wrap;word-break:break-word}
 .e{color:var(--err)}.w{color:var(--warn)}.i{color:var(--ok)}
-.cbar{display:flex;justify-content:space-between;padding:4px 10px;background:var(--bar);font:11px "JetBrains Mono",monospace;color:var(--muted);flex:none}
+.cbar{display:flex;justify-content:space-between;align-items:center;padding:4px 10px;background:var(--bar);border-bottom:1px solid var(--line);font:11px "JetBrains Mono",monospace;color:var(--muted);flex:none}
 .cbar button{border:0;background:none;color:var(--muted);font:inherit;cursor:pointer}
-#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);max-width:90%;text-align:center;background:var(--text);color:var(--panel);padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:999}
+#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--text);color:var(--panel);padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:999;max-width:90vw}
 #toast.show{opacity:1}
 input[type="file"]{display:none}
-@media (max-width:760px){
-  .app{flex-direction:column}
-  #div{width:auto;height:6px;cursor:row-resize}
-  .hide-m{display:none}
-  header{flex-direction:column;align-items:flex-start}
-  .hdr-right{width:100%}
-  textarea,.gut{font-size:16px;line-height:22px}
-}
+@media (max-width:760px){.app{flex-direction:column}#div{width:auto;height:6px;cursor:row-resize}.hide-m{display:none}header{flex-direction:column;align-items:flex-start}.hdr-right{width:100%}}
 </style>
 </head>
 <body>
 <header>
-  <div class="hdr-left"><h1>Code Editor</h1></div>
+  <div class="hdr-left"><h1>Code Editor</h1><span id="savest">✓ Saved</span></div>
   <div class="hdr-right">
-    <button class="btn" id="saveb" title="Save (Ctrl+S)">💾 Save</button>
+    <button class="btn primary" id="save" title="Save to this browser (Ctrl+S)">💾 Save</button>
     <button class="btn" id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
     <button class="btn" id="redo" title="Redo (Ctrl+Y)">↷ Redo</button>
     <button class="btn" id="imphtml" title="Select multiple HTML files">📄 HTML</button>
@@ -94,20 +94,24 @@ input[type="file"]{display:none}
   <section class="pane" id="pv">
     <div id="preview-container">
       <div class="bar">
-        <span class="live" id="live"><span>PREVIEW</span><b></b></span>
+        <span class="live" id="live"><span>LIVE</span><b></b></span>
         <select id="page" aria-label="Preview page"></select>
         <span class="sp"></span>
-        <button class="btn" id="runb" title="Run JavaScript and show console output (Ctrl+Enter)">▶ Run</button>
         <button class="btn hide-m" id="lay">Stack</button>
-        <button class="btn" id="cons">Console</button>
-        <button class="btn" id="dl">Download</button>
+        <button class="btn" id="dl" title="Download all files + images as website.zip">Download</button>
         <button class="btn" id="rst">Reset</button>
       </div>
-      <div class="frame"><iframe id="out" title="Preview" sandbox="allow-scripts allow-modals allow-forms allow-popups"></iframe></div>
+      <div class="frame"><iframe id="out" title="Preview" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-top-navigation-by-user-activation"></iframe></div>
+    </div>
+    <div id="runbar">
+      <button class="btn primary" id="run" title="Run again (Ctrl+Enter)">▶ Run</button>
+      <button class="btn" id="cons">Console</button>
+      <span class="sp"></span>
+      <span style="font:11px 'JetBrains Mono',monospace;color:var(--muted)">auto-runs while you type</span>
     </div>
     <div id="con">
-      <div id="con-divider" role="separator"></div>
-      <div class="cbar"><span>Console</span><button id="clr">Clear</button></div>
+      <div id="con-divider" role="separator" aria-label="Drag to resize console" title="Drag to resize (double-click to reset)"></div>
+      <div class="cbar"><span>Console &nbsp; <span id="conuse">0.0 / 25 KB</span></span><button id="clr">Clear</button></div>
       <div id="log"></div>
     </div>
   </section>
@@ -125,10 +129,11 @@ input[type="file"]{display:none}
 // ====== CONSTANTS ======
 const SC = '<\/script>';
 const KEY = 'code-editor:v4';
-const THEME_KEY = 'code-editor:v1:theme';
+const CAP = 25 * 1024;               // console output limit (bytes of text)
+const MAX_UNDO = 200;
 const VOID_TAGS = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/i;
 const PAIRS = {'(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`'};
-const COL = {html: '#e2582b', css: '#2468d8', js: '#b9650f'};
+const STOPPED = '<body style="font:14px sans-serif;padding:20px;color:#b33">Preview stopped: console output passed 25 KB (probably an infinite loop).<br>Fix the code, then press ▶ Run.</body>';
 
 // ====== STATE ======
 let files = starter();
@@ -137,11 +142,11 @@ let page = 'index.html';
 let images = {};
 let undo = [];
 let redo = [];
-let grouping = false;
-let groupTimer;
+let editting = false;
+let dirty = false;
 
-// ====== DOM ======
-const $ = (id) => document.getElementById(id);
+// ====== DOM REFERENCES ======
+function $(id) { return document.getElementById(id); }
 const src = $('src');
 const gut = $('gut');
 const out = $('out');
@@ -160,87 +165,65 @@ function starter() {
   ];
 }
 
-let dirty = false;
-function updateSaveBtn() {
-  const b = $('saveb');
-  b.classList.toggle('dirty', dirty);
-  b.textContent = dirty ? '💾 Save ●' : '💾 Save';
-  document.title = (dirty ? '* ' : '') + 'Code Editor';
-}
-function markDirty() {
-  if (!dirty) { dirty = true; updateSaveBtn(); }
-}
-// Saving only happens when you press Save (or Ctrl+S). Nothing is saved automatically.
-function saveProject() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify({files, cur, page, images}));
-    dirty = false;
-    updateSaveBtn();
-    toast('✓ Saved');
-  } catch (e) {
-    toast('Could not save. Browser storage may be full.');
-  }
-}
-window.addEventListener('beforeunload', (e) => {
-  if (dirty) { e.preventDefault(); e.returnValue = ''; }
-});
-
-function toast(msg, ms) {
+function toast(msg) {
   const t = $('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toast.t);
-  toast.t = setTimeout(() => t.classList.remove('show'), ms || 2200);
+  toast.t = setTimeout(() => t.classList.remove('show'), 2400);
 }
 
 function get(name) {
   for (const f of files) if (f.name === name) return f;
   return null;
 }
+
 function ext(name) {
   const m = name.match(/\.([^.]+)$/);
   return m ? m[1].toLowerCase() : '';
 }
-function htmls() { return files.filter(f => ext(f.name) === 'html'); }
+
+const COL = {html: '#e2582b', css: '#2468d8', js: '#b9650f'};
+
 function lines() {
   const n = src.value.split('\n').length;
-  let s = '';
-  for (let i = 1; i <= n; i++) s += (i > 1 ? '\n' : '') + i;
-  gut.textContent = s;
-}
-function setLive(bad) { live.classList.toggle('err', !!bad); }
-const LOG_CAP = 102400; // 100 KB of console output per run
-let logBytes = 0;
-function clearLog() { log.innerHTML = ''; logBytes = 0; }
-function appendLog(cls, text) {
-  const r = document.createElement('div');
-  if (cls) r.className = cls;
-  r.textContent = text;
-  log.appendChild(r);
-  while (log.childElementCount > 300) log.removeChild(log.firstChild);
-  log.scrollTop = log.scrollHeight;
-}
-function addLog(cls, text) {
-  if (cls !== 'e') { // errors always show
-    if (logBytes >= LOG_CAP) return;
-    const room = LOG_CAP - logBytes;
-    const over = text.length > room;
-    if (over) text = text.slice(0, room);
-    logBytes += text.length + 1;
-    appendLog(cls, text);
-    if (over || logBytes >= LOG_CAP) {
-      logBytes = LOG_CAP;
-      appendLog('w', '… output capped at 100 KB. Run again to reset.');
-    }
-    return;
-  }
-  appendLog(cls, text);
-}
-function placeholder(msg) {
-  return '<!DOCTYPE html><meta charset="utf-8"><body style="font-family:system-ui,sans-serif;padding:20px;color:#666">' + msg + '</body>';
+  const a = [];
+  for (let i = 1; i <= n; i++) a.push(i);
+  gut.textContent = a.join('\n');
 }
 
-// ====== TABS & FILES ======
+function htmls() { return files.filter(f => ext(f.name) === 'html'); }
+
+function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// ====== SAVE (manual) ======
+function setDirty(v) {
+  dirty = v;
+  $('save').classList.toggle('dirty', v);
+  const s = $('savest');
+  s.textContent = v ? '● Unsaved changes' : '✓ Saved';
+  s.className = v ? 'unsaved' : '';
+}
+function markDirty() { if (!dirty) setDirty(true); }
+
+function saveNow() {
+  const f = get(cur);
+  if (f) f.content = src.value;
+  try {
+    localStorage.setItem(KEY, JSON.stringify({files, cur, page, images}));
+    setDirty(false);
+    toast('✓ Saved');
+  } catch (e) {
+    toast('Save failed: browser storage is full or blocked (large images?)');
+  }
+}
+$('save').onclick = saveNow;
+
+window.addEventListener('beforeunload', (e) => {
+  if (dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// ====== FILE MANAGEMENT ======
 function renderTabs() {
   tabs.innerHTML = '';
 
@@ -253,16 +236,19 @@ function renderTabs() {
 
     const d = document.createElement('i');
     d.style.background = COL[ext(f.name)] || '#8b93a3';
+
     const l = document.createElement('span');
     l.textContent = f.name;
+
     const x = document.createElement('button');
     x.className = 'x';
     x.textContent = '×';
     x.title = 'Delete ' + f.name;
+
     b.append(d, l, x);
 
-    b.onclick = () => openFile(f.name);
-    b.onkeydown = (e) => { if (e.key === 'Enter' && e.target === b) openFile(f.name); };
+    b.onclick = () => open(f.name);
+    b.onkeydown = (e) => { if (e.key === 'Enter' && e.target === b) open(f.name); };
     b.ondblclick = () => askName(f.name, b, (n) => rename(f.name, n));
 
     x.onclick = (e) => {
@@ -274,12 +260,13 @@ function renderTabs() {
         return;
       }
       if (files.length < 2) { toast('Keep at least one file'); return; }
+
       files = files.filter(g => g !== f);
       if (cur === f.name) cur = files[0].name;
       fixPage();
       markDirty();
-      openFile(cur);
-      preview();
+      open(cur);
+      run();
     };
 
     tabs.appendChild(b);
@@ -293,15 +280,17 @@ function renderTabs() {
     askName('', a, (n) => {
       if (!ext(n)) n += '.html';
       if (get(n)) { toast(n + ' already exists'); return; }
+
       const tpl = ext(n) === 'html'
         ? '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>' + n.replace(/\.html$/, '') + '</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>' + n + '</h1>\n</body>\n</html>'
         : '';
+
       files.push({name: n, content: tpl});
       cur = n;
       fixPage();
       markDirty();
-      openFile(cur);
-      preview();
+      open(cur);
+      run();
     });
   };
   tabs.appendChild(a);
@@ -333,6 +322,7 @@ function askName(init, el, cb) {
     if (ok && v && v !== init) cb(v);
     else renderTabs();
   };
+
   i.onkeydown = (e) => {
     if (e.key === 'Enter') fin(true);
     if (e.key === 'Escape') fin(false);
@@ -343,35 +333,48 @@ function askName(init, el, cb) {
 function rename(a, b) {
   if (!ext(b)) b += '.' + ext(a);
   if (get(b)) { toast(b + ' already exists'); renderTabs(); return; }
+
   const f = get(a);
-  if (!f) return;
-  f.name = b;
-  if (cur === a) cur = b;
-  if (page === a) page = b;
-  fixPage();
-  markDirty();
-  openFile(cur);
-  preview();
+  if (f) {
+    f.name = b;
+    if (cur === a) cur = b;
+    if (page === a) page = b;
+    fixPage();
+    markDirty();
+    open(cur);
+    run();
+  }
 }
 
 function fixPage() {
+  const h = htmls();
   if (!get(page) || ext(page) !== 'html') {
-    const h = htmls();
     page = (get('index.html') && 'index.html') || (h[0] && h[0].name) || '';
   }
 }
 
-function openFile(n) {
+function open(n) {
   cur = n;
   const f = get(n);
-  if (f) { src.value = f.content; lines(); }
+  if (f) {
+    src.value = f.content;
+    lines();
+  }
   gut.scrollTop = 0;
   renderTabs();
-  
   undo = [];
   redo = [];
-  grouping = false;
   updateHistBtns();
+}
+
+function pushHist() {
+  const f = get(cur);
+  if (f) {
+    undo.push(f.content);
+    if (undo.length > MAX_UNDO) undo.shift();
+    redo = [];
+    updateHistBtns();
+  }
 }
 
 function updateHistBtns() {
@@ -379,173 +382,258 @@ function updateHistBtns() {
   $('redo').disabled = redo.length === 0;
 }
 
-// ====== LOOP GUARD ======
-// Rewrites `while(cond)` to `while(__lg()&&(cond))` and the middle part of
-// `for(a;b;c)` the same way. __lg() (defined in HOOK) throws if the code has
-// run for over 2 seconds without ever yielding to the browser.
-function skipString(s, i) {
-  const q = s[i];
+// ====== LOOP GUARD (stops infinite loops instead of freezing the tab) ======
+// ==== GUARD START
+function skipString(code, i) {
+  const q = code[i], n = code.length;
   let j = i + 1;
-  while (j < s.length && s[j] !== q) { if (s[j] === '\\') j++; j++; }
-  return j + 1;
+  while (j < n) {
+    const c = code[j];
+    if (c === '\\') { j += 2; continue; }
+    if (c === q || c === '\n') break;
+    j++;
+  }
+  return Math.min(j + 1, n);
 }
-function matchParen(s, i) {
-  let d = 0;
-  for (let j = i; j < s.length; j++) {
-    const c = s[j];
-    if (c === '"' || c === "'" || c === '`') { j = skipString(s, j) - 1; continue; }
+function skipTemplate(code, i) {
+  const n = code.length;
+  let j = i + 1;
+  while (j < n) {
+    const c = code[j];
+    if (c === '\\') { j += 2; continue; }
+    if (c === '`') return j + 1;
+    if (c === '$' && code[j + 1] === '{') { j = skipBraces(code, j + 1); continue; }
+    j++;
+  }
+  return n;
+}
+function skipBraces(code, i) {
+  const n = code.length;
+  let d = 0, j = i;
+  while (j < n) {
+    const c = code[j];
+    if (c === '"' || c === "'") { j = skipString(code, j); continue; }
+    if (c === '`') { j = skipTemplate(code, j); continue; }
+    if (c === '/' && code[j + 1] === '/') { const k = code.indexOf('\n', j); j = k < 0 ? n : k; continue; }
+    if (c === '/' && code[j + 1] === '*') { const k = code.indexOf('*/', j + 2); j = k < 0 ? n : k + 2; continue; }
+    if (c === '{') d++;
+    else if (c === '}') { d--; if (d === 0) return j + 1; }
+    j++;
+  }
+  return n;
+}
+function matchParen(code, i) {
+  const n = code.length;
+  let d = 0, j = i;
+  while (j < n) {
+    const c = code[j];
+    if (c === '"' || c === "'") { j = skipString(code, j); continue; }
+    if (c === '`') { j = skipTemplate(code, j); continue; }
+    if (c === '/' && code[j + 1] === '/') { const k = code.indexOf('\n', j); j = k < 0 ? n : k; continue; }
+    if (c === '/' && code[j + 1] === '*') { const k = code.indexOf('*/', j + 2); j = k < 0 ? n : k + 2; continue; }
     if (c === '(') d++;
     else if (c === ')') { d--; if (d === 0) return j; }
+    j++;
   }
   return -1;
 }
-function splitTop(s) {
-  const parts = [];
-  let d = 0, st = 0;
-  for (let j = 0; j < s.length; j++) {
-    const c = s[j];
-    if (c === '"' || c === "'" || c === '`') { j = skipString(s, j) - 1; continue; }
-    if ('([{'.indexOf(c) > -1) d++;
-    else if (')]}'.indexOf(c) > -1) d--;
-    else if (c === ';' && d === 0) { parts.push(s.slice(st, j)); st = j + 1; }
-  }
-  parts.push(s.slice(st));
-  return parts;
-}
-function guardLoops(js) {
-  const n = js.length;
-  const idRe = /[A-Za-z_$][\w$]*/y;
-  let out = '', i = 0, prev = '';
+// Inserts "__lp();" at the top of every for / while / do { ... } body.
+function guardLoops(code) {
+  const n = code.length;
+  let out = '', i = 0, last = '';
+  const isId = (c) => /[A-Za-z0-9_$]/.test(c);
+  const ws = (j) => { while (j < n && /\s/.test(code[j])) j++; return j; };
   while (i < n) {
-    const c = js[i], d = js[i + 1];
-    if (c === '/' && d === '/') {
-      let j = js.indexOf('\n', i); if (j < 0) j = n;
-      out += js.slice(i, j); i = j; continue;
-    }
-    if (c === '/' && d === '*') {
-      let j = js.indexOf('*/', i + 2); j = j < 0 ? n : j + 2;
-      out += js.slice(i, j); i = j; continue;
-    }
-    if (c === '"' || c === "'" || c === '`') {
-      const j = Math.min(skipString(js, i), n);
-      out += js.slice(i, j); i = j; prev = c; continue;
-    }
-    if (c === '/' && (prev === '' || '(,=:[!&|?{};+-*%<>~^'.indexOf(prev) > -1)) {
+    const c = code[i], d = code[i + 1];
+    if (c === '/' && d === '/') { const k = code.indexOf('\n', i); const e = k < 0 ? n : k; out += code.slice(i, e); i = e; continue; }
+    if (c === '/' && d === '*') { const k = code.indexOf('*/', i + 2); const e = k < 0 ? n : k + 2; out += code.slice(i, e); i = e; continue; }
+    if (c === '"' || c === "'") { const e = skipString(code, i); out += code.slice(i, e); i = e; last = c; continue; }
+    if (c === '`') { const e = skipTemplate(code, i); out += code.slice(i, e); i = e; last = '`'; continue; }
+    if (c === '/' && (last === '' || '(,=:[!&|?{};+-*%<>~^'.indexOf(last) > -1)) {
       let j = i + 1, cls = false;
-      while (j < n && js[j] !== '\n') {
-        const e = js[j];
-        if (e === '\\') j++;
-        else if (e === '[') cls = true;
-        else if (e === ']') cls = false;
-        else if (e === '/' && !cls) break;
+      while (j < n) {
+        const x = code[j];
+        if (x === '\\') { j += 2; continue; }
+        if (x === '\n') break;
+        if (cls) { if (x === ']') cls = false; }
+        else if (x === '[') cls = true;
+        else if (x === '/') break;
         j++;
       }
       j = Math.min(j + 1, n);
-      out += js.slice(i, j); i = j; prev = ')'; continue;
+      while (j < n && /[a-z]/i.test(code[j])) j++;
+      out += code.slice(i, j); i = j; last = ')';
+      continue;
     }
-    if (/[A-Za-z_$]/.test(c)) {
-      idRe.lastIndex = i;
-      const word = idRe.exec(js)[0];
-      if ((word === 'for' || word === 'while') && prev !== '.') {
-        let k = i + word.length, j = k;
-        while (j < n && /\s/.test(js[j])) j++;
-        if (js[j] === '(') {
-          const e = matchParen(js, j);
-          if (e > 0) {
-            const inner = js.slice(j + 1, e);
-            let ni = inner;
-            if (word === 'while') {
-              ni = '__lg()&&(' + inner + ')';
-            } else {
-              const parts = splitTop(inner);
-              if (parts.length === 3) {
-                parts[1] = parts[1].trim() ? '__lg()&&(' + parts[1] + ')' : '__lg()';
-                ni = parts.join(';');
-              }
+    if (isId(c)) {
+      let j = i;
+      while (j < n && isId(code[j])) j++;
+      const w = code.slice(i, j);
+      const before = last;
+      out += w; i = j; last = 'a';
+      if (before === '.') continue;
+      if (w === 'for' || w === 'while') {
+        const k = ws(i);
+        if (code[k] === '(') {
+          const close = matchParen(code, k);
+          if (close > -1) {
+            const b = ws(close + 1);
+            if (code[b] === '{') {
+              out += code.slice(i, b + 1) + ' __lp();';
+              i = b + 1; last = '{';
             }
-            out += word + js.slice(k, j) + '(' + ni + ')';
-            i = e + 1; prev = ')'; continue;
           }
         }
+      } else if (w === 'do') {
+        const b = ws(i);
+        if (code[b] === '{') {
+          out += code.slice(i, b + 1) + ' __lp();';
+          i = b + 1; last = '{';
+        }
       }
-      out += word; i += word.length; prev = word[word.length - 1]; continue;
+      continue;
     }
     out += c;
-    if (!/\s/.test(c)) prev = c;
+    if (!/\s/.test(c)) last = c;
     i++;
   }
   return out;
 }
+// ==== GUARD END
+
+let canEval = null;
+function evalOk() {
+  if (canEval === null) {
+    try { new Function(''); canEval = true; } catch (e) { canEval = false; }
+  }
+  return canEval;
+}
+function guarded(code) {
+  if (!code) return code;
+  let g;
+  try { g = guardLoops(code); } catch (e) { return code; }
+  if (g === code) return code;
+  if (evalOk()) {
+    // never ship instrumented code that does not compile
+    try { new Function(code); } catch (e) { return code; }
+    try { new Function(g); } catch (e) { return code; }
+  }
+  return g;
+}
 
 // ====== PREVIEW HOOK (runs inside the preview iframe) ======
-// This function is stringified and injected into the page. Keep it self-contained.
+// ==== HOOK START
 function hookFn() {
-  var T = Date.now(), C = 0;
-  var sent = 0, errs = 0;
-  function send(t, a) {
-    var m = Array.prototype.map.call(a, function (x) {
-      if (x && typeof x === 'object') { try { return JSON.stringify(x); } catch (e) {} }
+  var LIMIT = 25600, MAXMSG = 2000, BUDGET = 3000;
+  var sent = 0, told = false, ts = Date.now(), n = 0;
+  var realOpen = window.open;
+
+  function post(t, m) { try { parent.postMessage({__ce: 1, t: t, m: m}, '*'); } catch (e) {} }
+
+  function emit(t, args) {
+    if (sent >= LIMIT) {
+      if (!told) { told = true; post('capped', ''); }
+      return;
+    }
+    var m = Array.prototype.map.call(args, function (x) {
+      if (typeof x === 'object' && x !== null) { try { return JSON.stringify(x); } catch (e) {} }
       return String(x);
     }).join(' ');
-    if (t === 'error') { if (++errs > 50) return; }
-    else if (t !== 'nav' && t !== 'ready') {
-      if (sent >= 102400) return; // 100 KB output cap
-      sent += m.length + 1;
-    }
-    try { parent.postMessage({__ce: 1, t: t, m: m}, '*'); } catch (e) {}
+    if (m.length > MAXMSG) m = m.slice(0, MAXMSG) + ' ...(truncated)';
+    sent += m.length + 1;
+    post(t, m);
   }
-  // Loop watchdog: T is refreshed whenever the browser gets a chance to run timers.
-  window.__lg = function () {
-    if ((++C & 63) === 0 && Date.now() - T > 2000) {
-      throw new Error('Infinite loop stopped: code ran over 2 seconds without pausing');
-    }
-    return true;
-  };
-  setInterval(function () { T = Date.now(); }, 250);
-  ['alert', 'confirm', 'prompt'].forEach(function (k) {
-    var o = window[k];
-    window[k] = function () { var r = o.apply(window, arguments); T = Date.now(); return r; };
-  });
-  var _open = window.open;
-  window.open = function (u) {
-    if (u && !/^(https?:)?\/\//i.test(u)) { send('nav', [u]); return null; }
-    return _open.apply(window, arguments);
-  };
+
   ['log', 'info', 'warn', 'error'].forEach(function (k) {
     var o = console[k];
-    console[k] = function () { send(k, arguments); o.apply(console, arguments); };
+    console[k] = function () {
+      emit(k, arguments);
+      try { o.apply(console, arguments); } catch (e) {}
+    };
   });
-  window.addEventListener('error', function (e) { send('error', [e.message + ' (line ' + e.lineno + ')']); });
-  window.addEventListener('unhandledrejection', function (e) { send('error', ['Unhandled: ' + e.reason]); });
+  window.addEventListener('error', function (e) { emit('error', [e.message + (e.lineno ? ' (line ' + e.lineno + ')' : '')]); });
+  window.addEventListener('unhandledrejection', function (e) { emit('error', ['Unhandled: ' + e.reason]); });
+
+  // loop guard: any loop that runs 3s without yielding is stopped
+  function touch() { ts = Date.now(); }
+  setInterval(touch, 50);
+  ['click', 'keydown', 'input', 'pointerdown', 'touchstart', 'message'].forEach(function (k) {
+    window.addEventListener(k, touch, true);
+  });
+  window.__lp = function () {
+    if ((++n & 255) === 0 && Date.now() - ts > BUDGET) {
+      throw new Error('Infinite loop stopped: a loop ran for more than 3 seconds without finishing.');
+    }
+  };
+
+  // window.open("page.html") -> switch preview page
+  window.open = function (u) {
+    u = String(u == null ? '' : u);
+    if (!u) return null;
+    if (/^(https?:)?\/\//i.test(u)) { try { return realOpen.apply(window, arguments); } catch (x) { return null; } }
+    post('nav', u);
+    return {closed: false, close: function () {}, focus: function () {}};
+  };
+
+  // <a href="page.html"> -> switch preview page
   document.addEventListener('click', function (e) {
-    var a = e.target.closest && e.target.closest('a[href]');
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (!a) return;
     var h = a.getAttribute('href');
     if (/^(#|mailto:|tel:|javascript:)/i.test(h)) return;
     e.preventDefault();
-    if (/^(https?:)?\/\//i.test(h)) { _open.call(window, h, '_blank'); return; }
-    send('nav', [h]);
+    if (/^(https?:)?\/\//i.test(h)) { try { realOpen.call(window, h, '_blank'); } catch (x) {} return; }
+    post('nav', h);
   }, true);
-  document.addEventListener('DOMContentLoaded', function () { T = Date.now(); send('ready', ['']); });
+
+  // window.location.href = "page.html" (Navigation API, where supported)
+  try {
+    if (window.navigation && navigation.addEventListener) {
+      navigation.addEventListener('navigate', function (e) {
+        var u = (e.destination && e.destination.url) || '';
+        if (e.hashChange || (e.destination && e.destination.sameDocument)) return;
+        if (!/^(https?|file):/i.test(u) || !e.cancelable) return;   // ignores the editor's own srcdoc reloads
+        e.preventDefault();
+        post('nav', u.split('#')[0].split('?')[0].split('/').pop());
+      });
+    }
+  } catch (x) {}
 }
+// ==== HOOK END
+
 const HOOK = '<scr' + 'ipt>(' + hookFn.toString() + ')();' + SC;
 
-// ====== BUILD ======
+// ====== PREVIEW & BUILD ======
 function norm(h) {
-  return h.split('#')[0].split('?')[0].replace(/^(\.?\/)+/, '');
+  return String(h).split('#')[0].split('?')[0].replace(/^(\.?\/)+/, '');
 }
-function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-function build(name, hook, scripts) {
+function imgData(p) {
+  const n = norm(p);
+  if (images[n]) return images[n];
+  const base = n.split('/').pop();
+  return images[base] || null;
+}
+
+function inlineImagesInJs(code) {
+  Object.keys(images).forEach((k) => {
+    const re = new RegExp('(["\'])(?:\\.?\\/)?(?:[\\w.-]+\\/)*' + esc(k) + '\\1', 'g');
+    code = code.replace(re, () => JSON.stringify(images[k]));
+  });
+  return code;
+}
+
+function build(name, hook) {
   const f = get(name);
-  if (!f) return placeholder('Add an HTML file to see a preview.');
+  if (!f) return '<p style="font-family:sans-serif;padding:20px;color:#999">Add an HTML file to see preview.</p>';
 
   let h = f.content;
+
   if (!/<(html|body)/i.test(h)) {
     h = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>' + h + '</body></html>';
   }
 
-  // Inline CSS files
+  // CSS files
   h = h.replace(/<link\b[^>]*>/gi, (t) => {
     const m = t.match(/href=["']([^"']+)["']/i);
     if (m && /stylesheet/i.test(t)) {
@@ -555,129 +643,143 @@ function build(name, hook, scripts) {
     return t;
   });
 
-  // Inline JS files
-  h = h.replace(/<script\b([^>]*?)src=["']([^"']+)["']([^>]*)>\s*<\/script>/gi, (t, a, s, b) => {
-    const r = get(norm(s));
-    return r ? '<script' + a + b + '>\n' + r.content.replace(/<\/script/gi, '<\\/script') + '\n' + SC : t;
+  // Images: src="..." / poster="..." attributes and CSS url(...)
+  h = h.replace(/(\s(?:src|poster|data-src)\s*=\s*)(["'])([^"']+)\2/gi, (m, a, q, p) => {
+    const d = imgData(p);
+    return d ? a + q + d + q : m;
+  });
+  h = h.replace(/url\(\s*(["']?)([^"')]+)\1\s*\)/gi, (m, q, p) => {
+    if (/^(data:|https?:|\/\/|#)/i.test(p)) return m;
+    const d = imgData(p);
+    return d ? 'url(' + q + d + q + ')' : m;
   });
 
-  // Swap in uploaded images (src=, href=, poster=, url())
-  Object.keys(images).forEach((k) => {
-    const re = new RegExp('((?:src|href|poster)\\s*=\\s*["\']?|url\\(\\s*["\']?)\\/?(?:[\\w.\\-]+\\/)*' + esc(k) + '(?=["\'\\s)>])', 'gi');
-    h = h.replace(re, (m, p) => p + images[k]);
+  // Scripts: inline project files, guard loops in all JS
+  h = h.replace(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi, (t, attrs, body) => {
+    const tm = attrs.match(/\btype\s*=\s*["']?([^"'\s>]+)/i);
+    if (tm && !/javascript|module|ecmascript/i.test(tm[1])) return t;
+    let code = body, a = attrs;
+    const sm = attrs.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
+    if (sm) {
+      const r = get(norm(sm[1]));
+      if (!r) return t;                       // external script (CDN etc.)
+      code = r.content;
+      a = attrs.replace(/\bsrc\s*=\s*["'][^"']*["']/i, '');
+    }
+    code = inlineImagesInJs(guarded(code));
+    return '<script' + a + '>\n' + code.replace(/<\/script/gi, '<\\/script') + '\n' + SC;
   });
 
   if (hook) {
-    // Visual-only mode: remove scripts so nothing executes until Run is pressed
-    if (!scripts) h = h.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
-
-    // Guard loops in all inline scripts
-    h = h.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (t, a, body) => {
-      if (/\bsrc\s*=/i.test(a)) return t;
-      const ty = (a.match(/\btype\s*=\s*["']?([^"'\s>]+)/i) || [])[1];
-      if (ty && !/^(text\/javascript|application\/javascript|module)$/i.test(ty)) return t;
-      try { return '<script' + a + '>' + guardLoops(body) + SC; } catch (e) { return t; }
-    });
-
-    // Inject the hook as early as possible
-    if (/<head(\s[^>]*)?>/i.test(h)) h = h.replace(/<head(\s[^>]*)?>/i, (m) => m + HOOK);
-    else if (/<html(\s[^>]*)?>/i.test(h)) h = h.replace(/<html(\s[^>]*)?>/i, (m) => m + HOOK);
-    else h = HOOK + h;
+    h = /<head[^>]*>/i.test(h)
+      ? h.replace(/<head[^>]*>/i, (m) => m + HOOK)
+      : HOOK + h;
   }
+
   return h;
 }
 
-let lastScripts = false;
-let runTimer;
-// render(false): HTML + CSS only, scripts are not executed (automatic).
-// render(true):  also executes JavaScript and clears the console (Run button).
-function render(scripts) {
-  lastScripts = scripts;
-  setLive(false);
-  if (scripts) clearLog();
+// ====== CONSOLE (capped at 25 KB) ======
+let used = 0, capped = false;
+
+function setUse() { $('conuse').textContent = (used / 1024).toFixed(1) + ' / 25 KB'; }
+
+function row(text, cls) {
+  const r = document.createElement('div');
+  if (cls) r.className = cls;
+  r.textContent = text;
+  log.appendChild(r);
+  log.scrollTop = log.scrollHeight;
+}
+
+function capHit() {
+  if (capped) return;
+  capped = true;
+  row('⚠ Console passed the 25 KB limit, so the preview was stopped (probably an infinite loop). Fix the code, then press ▶ Run.', 'e');
+  live.classList.add('err');
+  out.srcdoc = STOPPED;
+  setUse();
+}
+
+function addLog(text, cls) {
+  if (capped) return;
+  if (used + text.length + 1 > CAP) { capHit(); return; }
+  used += text.length + 1;
+  row(text, cls);
+  setUse();
+}
+
+function resetLog() {
+  log.textContent = '';
+  used = 0;
+  capped = false;
+  setUse();
+}
+
+function run() {
+  live.classList.remove('err');
+  resetLog();
   try {
-    out.srcdoc = build(page, true, scripts);
+    out.srcdoc = build(page, true);
   } catch (e) {
-    setLive(true);
-    addLog('e', 'Build error: ' + e.message);
+    live.classList.add('err');
+    addLog('Build error: ' + e.message, 'e');
   }
 }
-function run() { render(true); }
-function preview() { render(false); }
+
+let tm;
 function sched() {
-  clearTimeout(runTimer);
-  runTimer = setTimeout(preview, 350);
+  clearTimeout(tm);
+  tm = setTimeout(run, 350);
 }
 
 window.addEventListener('message', (e) => {
   const d = e.data;
   if (!d || !d.__ce || e.source !== out.contentWindow) return;
 
-  if (d.t === 'ready') return;
+  if (d.t === 'capped') { capHit(); return; }
+
   if (d.t === 'nav') {
-    const n = norm(d.m);
+    let n = norm(d.m);
+    if (!(get(n) && ext(n) === 'html')) n = n.split('/').pop();
     if (get(n) && ext(n) === 'html') {
       page = n;
       $('page').value = n;
-      
-      render(lastScripts);
+      run();
     } else {
       toast('Page not found: ' + d.m);
-      addLog('w', 'Navigation error: page "' + d.m + '" does not exist.');
+      addLog('Navigation error: page "' + d.m + '" does not exist.', 'w');
     }
     return;
   }
-  if (d.t === 'error') { setLive(true); addLog('e', d.m); }
-  else if (d.t === 'warn') addLog('w', d.m);
-  else addLog('i', d.m);
+
+  const text = String(d.m);
+  if (d.t === 'error') { live.classList.add('err'); addLog(text, 'e'); }
+  else if (d.t === 'warn') addLog(text, 'w');
+  else addLog(text, 'i');
 });
 
-// ====== TEXT EDITING ======
-// Auto-close tags. Runs from the input event (not keydown) so it also works
-// with mobile/IME keyboards that don't report a real key.
-function inRawText(v, pos) {
-  const before = v.slice(0, pos).toLowerCase();
-  for (const t of ['script', 'style']) {
-    if (before.lastIndexOf('<' + t) > before.lastIndexOf('</' + t)) return true;
-  }
-  return before.lastIndexOf('<!--') > before.lastIndexOf('-->');
-}
-function autoCloseTag() {
-  const a = src.selectionStart, v = src.value;
-  if (a !== src.selectionEnd || v[a - 1] !== '>') return;
-  const lt = v.lastIndexOf('<', a - 2);
-  if (lt < 0) return;
-  const seg = v.slice(lt, a - 1);
-  const m = seg.match(/^<([a-zA-Z][\w:.-]*)(\s[^<>]*)?$/);
-  if (!m || /\/\s*$/.test(seg) || VOID_TAGS.test(m[1])) return;
-  if (inRawText(v, lt)) return;
-  const close = '</' + m[1] + '>';
-  if (v.slice(a, a + close.length).toLowerCase() === close.toLowerCase()) return;
-  src.setRangeText(close, a, a, 'start'); // cursor stays between the tags
-}
+$('run').onclick = run;
 
-src.addEventListener('input', (e) => {
-  const f = get(cur);
-  if (!f) return;
-  if (e.inputType === 'insertText' && e.data === '>' && ext(cur) === 'html') autoCloseTag();
-  if (!grouping) {
-    undo.push(f.content);
-    if (undo.length > 200) undo.shift();
-    redo = [];
-    grouping = true;
-    updateHistBtns();
+// ====== TEXT EDITING ======
+src.addEventListener('input', () => {
+  if (!editting) {
+    pushHist();
+    editting = true;
   }
-  clearTimeout(groupTimer);
-  groupTimer = setTimeout(() => { grouping = false; }, 700);
-  f.content = src.value;
-  lines();
-  markDirty();
-  sched();
+  const f = get(cur);
+  if (f) {
+    f.content = src.value;
+    lines();
+    markDirty();
+    sched();
+  }
 });
 
 src.addEventListener('scroll', () => { gut.scrollTop = src.scrollTop; });
 
 src.addEventListener('keydown', (e) => {
+  editting = false;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
 
   const a = src.selectionStart;
@@ -687,22 +789,20 @@ src.addEventListener('keydown', (e) => {
   const nx = v.charAt(b);
   const pv = v.charAt(a - 1);
   const isH = ext(cur) === 'html';
-  const fire = () => src.dispatchEvent(new Event('input'));
 
-  // Tab to indent (Shift+Tab leaves the editor)
-  if (k === 'Tab' && !e.shiftKey) {
+  if (k === 'Tab') {
     e.preventDefault();
     src.setRangeText('  ', a, b, 'end');
-    fire();
+    src.dispatchEvent(new Event('input'));
     return;
   }
 
-  // Smart Enter
   if (k === 'Enter') {
     const ls = v.lastIndexOf('\n', a - 1) + 1;
+    const ind = v.slice(ls, a).match(/^\s*/)[0];
     const before = v.slice(ls, a);
-    const ind = before.match(/^\s*/)[0];
     e.preventDefault();
+
     if ((/[{(\[]/.test(pv) && /[})\]]/.test(nx)) ||
         (isH && pv === '>' && v.slice(b, b + 2) === '</')) {
       src.setRangeText('\n' + ind + '  \n' + ind, a, b, 'end');
@@ -710,43 +810,57 @@ src.addEventListener('keydown', (e) => {
     } else {
       src.setRangeText('\n' + ind + (/[{(\[]\s*$/.test(before) ? '  ' : ''), a, b, 'end');
     }
-    fire();
+    src.dispatchEvent(new Event('input'));
     return;
   }
 
-  // Backspace deletes an empty pair
-  if (k === 'Backspace' && a === b && PAIRS[pv] && PAIRS[pv] === nx) {
-    e.preventDefault();
-    src.setRangeText('', a - 1, a + 1, 'end');
-    fire();
-    return;
+  if (k === 'Backspace' && a === b) {
+    if (PAIRS[pv] && PAIRS[pv] === nx) {
+      e.preventDefault();
+      src.setRangeText('', a - 1, a + 1, 'end');
+      src.dispatchEvent(new Event('input'));
+      return;
+    }
   }
 
-  // Type over a closing character
   if (a === b && k.length === 1 && ')]}"\'`'.indexOf(k) > -1 && nx === k) {
     e.preventDefault();
     src.selectionStart = src.selectionEnd = a + 1;
     return;
   }
 
-  // Auto pair
   if (PAIRS[k]) {
     if (k === "'" && /\w/.test(pv)) return;
+
     if (a !== b) {
       e.preventDefault();
       const sel = v.slice(a, b);
       src.setRangeText(k + sel + PAIRS[k], a, b, 'select');
       src.selectionStart = a + 1;
       src.selectionEnd = b + 1;
-      fire();
+      src.dispatchEvent(new Event('input'));
       return;
     }
+
     if (nx && !/[\s)\]}>,;]/.test(nx)) return;
     e.preventDefault();
     src.setRangeText(k + PAIRS[k], a, b, 'end');
     src.selectionStart = src.selectionEnd = a + 1;
-    fire();
+    src.dispatchEvent(new Event('input'));
     return;
+  }
+
+  if (k === '>' && isH && a === b) {
+    const lt = v.lastIndexOf('<', a - 1);
+    const seg = v.slice(lt, a);
+    const m = lt > -1 && seg.match(/^<([a-zA-Z][\w:-]*)(\s[^<>]*)?$/);
+
+    if (m && !/\/$/.test(seg) && !VOID_TAGS.test(m[1])) {
+      e.preventDefault();
+      src.setRangeText('></' + m[1] + '>', a, b, 'end');
+      src.selectionStart = src.selectionEnd = a + 1;
+      src.dispatchEvent(new Event('input'));
+    }
   }
 });
 
@@ -754,78 +868,95 @@ document.addEventListener('keydown', (e) => {
   const m = e.ctrlKey || e.metaKey;
   if (!m) return;
   const key = e.key.toLowerCase();
-  if (key === 's') { e.preventDefault(); saveProject(); }
+  const inName = e.target && e.target.tagName === 'INPUT';
+  if (key === 's') { e.preventDefault(); saveNow(); }
   else if (key === 'enter') { e.preventDefault(); run(); }
-  else if (e.target === src && key === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); }
-  else if (e.target === src && (key === 'y' || (key === 'z' && e.shiftKey))) { e.preventDefault(); doRedo(); }
+  else if (key === 'z' && !e.shiftKey && !inName) { e.preventDefault(); doUndo(); }
+  else if ((key === 'y' || (key === 'z' && e.shiftKey)) && !inName) { e.preventDefault(); doRedo(); }
 });
 
-// ====== UNDO / REDO ======
-function applyHistory(from, to) {
+// ====== UNDO/REDO ======
+function doUndo() {
+  if (undo.length === 0) return;
   const f = get(cur);
-  if (!f || !from.length) return;
-  to.push(f.content);
-  f.content = from.pop();
+  if (!f) return;
+  redo.push(f.content);
+  f.content = undo.pop();
   src.value = f.content;
-  grouping = false;
   lines();
   markDirty();
-  preview();
+  run();
   updateHistBtns();
 }
-function doUndo() { applyHistory(undo, redo); }
-function doRedo() { applyHistory(redo, undo); }
+
+function doRedo() {
+  if (redo.length === 0) return;
+  const f = get(cur);
+  if (!f) return;
+  undo.push(f.content);
+  f.content = redo.pop();
+  src.value = f.content;
+  lines();
+  markDirty();
+  run();
+  updateHistBtns();
+}
+
 $('undo').onclick = doUndo;
 $('redo').onclick = doRedo;
 
 // ====== FILE IMPORT ======
-function readDataURL(file) {
+function readFile(file, asDataUrl) {
   return new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => res(r.result);
-    r.onerror = () => rej(r.error);
-    r.readAsDataURL(file);
+    r.onerror = () => rej(r.error || new Error('read failed'));
+    if (asDataUrl) r.readAsDataURL(file); else r.readAsText(file);
   });
 }
 
-function bindImport(btn, input, type) {
-  btn.onclick = () => input.click();
-  input.onchange = async () => {
-    const list = Array.from(input.files);
-    input.value = '';
-    if (!list.length) return;
-
-    let added = 0, last = null;
-    for (const file of list) {
-      try {
-        if (type === 'img') {
-          images[file.name] = await readDataURL(file);
-          added++;
-        } else {
-          if (get(file.name)) { toast(file.name + ' skipped (already exists)'); continue; }
-          files.push({name: file.name, content: await file.text()});
-          last = file.name;
-          added++;
-        }
-      } catch (e) {
-        toast('Error loading ' + file.name);
+async function importFiles(list, type) {
+  let added = 0, skipped = 0, lastName = null;
+  for (const file of list) {
+    try {
+      if (type === 'img') {
+        images[file.name] = await readFile(file, true);
+        added++;
+      } else {
+        if (get(file.name)) { skipped++; continue; }
+        files.push({name: file.name, content: await readFile(file, false)});
+        lastName = file.name;
+        added++;
       }
+    } catch (e) {
+      toast('Error loading ' + file.name);
     }
-    if (!added) return;
-    if (last) cur = last;
-    fixPage();
+  }
+  if (added) {
     markDirty();
-    openFile(cur);
-    preview();
-    toast('✓ Added ' + added + (type === 'img' ? ' image(s)' : ' file(s)'));
-  };
+    if (type !== 'img' && lastName) { cur = lastName; fixPage(); open(cur); run(); }
+    else if (type === 'img') run();
+  }
+  toast((added ? '✓ Added ' + added + (type === 'img' ? ' image(s)' : ' file(s)') : 'Nothing added') +
+        (skipped ? ' · ' + skipped + ' skipped (already exist)' : ''));
 }
-bindImport($('imphtml'), $('fileinput'), 'html');
-bindImport($('impcss'), $('fileinput2'), 'css');
-bindImport($('impjs'), $('fileinput3'), 'js');
-bindImport($('impimg'), $('fileinput4'), 'img');
 
-// ====== DOWNLOAD ======
+function bindImport(btnId, inputId, type) {
+  const fi = $(inputId);
+  fi.onchange = () => {
+    const list = Array.from(fi.files || []);
+    fi.value = '';
+    if (list.length) importFiles(list, type);
+  };
+  $(btnId).onclick = () => fi.click();
+}
+bindImport('imphtml', 'fileinput', 'html');
+bindImport('impcss', 'fileinput2', 'css');
+bindImport('impjs', 'fileinput3', 'js');
+bindImport('impimg', 'fileinput4', 'img');
+
+// ====== DOWNLOAD (files + images) ======
+// ==== ZIP START
 const CRC_TABLE = (function () {
   const t = [];
   for (let n = 0; n < 256; n++) {
@@ -835,15 +966,34 @@ const CRC_TABLE = (function () {
   }
   return t;
 })();
+
 function crc32(b) {
   let c = ~0;
   for (let i = 0; i < b.length; i++) c = CRC_TABLE[(c ^ b[i]) & 255] ^ (c >>> 8);
   return (~c) >>> 0;
 }
-function zip(list) { // list: [{name, data: Uint8Array}]
+
+function dataUrlBytes(u) {
+  const i = u.indexOf(',');
+  const meta = u.slice(5, i), body = u.slice(i + 1);
+  if (/;base64/i.test(meta)) {
+    const bin = atob(body);
+    const a = new Uint8Array(bin.length);
+    for (let k = 0; k < bin.length; k++) a[k] = bin.charCodeAt(k);
+    return a;
+  }
+  return new TextEncoder().encode(decodeURIComponent(body));
+}
+
+// list: [{name, data: Uint8Array}]
+function zipBlob(list) {
   const enc = new TextEncoder();
   const parts = [], cd = [];
   let off = 0;
+  const now = new Date();
+  const dt = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xFFFF;
+  const dd = (((Math.max(now.getFullYear(), 1980) - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xFFFF;
+
   list.forEach((f) => {
     const nm = enc.encode(f.name);
     const d = f.data;
@@ -853,7 +1003,8 @@ function zip(list) { // list: [{name, data: Uint8Array}]
     h.setUint32(0, 0x04034b50, true);
     h.setUint16(4, 20, true);
     h.setUint16(6, 0x0800, true);
-    h.setUint16(12, 33, true); // 1980-01-01
+    h.setUint16(10, dt, true);
+    h.setUint16(12, dd, true);
     h.setUint32(14, c, true);
     h.setUint32(18, d.length, true);
     h.setUint32(22, d.length, true);
@@ -865,7 +1016,8 @@ function zip(list) { // list: [{name, data: Uint8Array}]
     g.setUint16(4, 20, true);
     g.setUint16(6, 20, true);
     g.setUint16(8, 0x0800, true);
-    g.setUint16(14, 33, true);
+    g.setUint16(12, dt, true);
+    g.setUint16(14, dd, true);
     g.setUint32(16, c, true);
     g.setUint32(20, d.length, true);
     g.setUint32(24, d.length, true);
@@ -888,33 +1040,73 @@ function zip(list) { // list: [{name, data: Uint8Array}]
 
   return new Blob(parts.concat(cd, [e.buffer]), {type: 'application/zip'});
 }
-function dataUrlBytes(u) {
-  const bin = atob(u.split(',')[1] || '');
-  const a = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
-  return a;
+// ==== ZIP END
+
+function projectEntries() {
+  const enc = new TextEncoder();
+  const list = files.map((f) => ({name: f.name, data: enc.encode(f.content)}));
+  Object.keys(images).forEach((k) => {
+    if (get(k)) return;                       // a text file already uses this name
+    list.push({name: k, data: dataUrlBytes(images[k])});
+  });
+  return list;
 }
 
-function download() {
+async function saveBlob(blob, name) {
+  // 1) published-page runtime
+  if (window.claude && typeof window.claude.use === 'function') {
+    let d = null;
+    try { d = await window.claude.use('downloads'); } catch (e) {}
+    if (d) {
+      try {
+        await d.save({filename: name, data: blob});
+        toast('✓ Saved ' + name);
+      } catch (e) {
+        toast(e && e.code === 'declined' ? 'Download cancelled' : 'Download failed: ' + ((e && e.message) || e));
+      }
+      return;
+    }
+  }
+  // 2) Android app (Capacitor): write to cache and open the share sheet
+  const cap = window.Capacitor;
+  if (cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.Filesystem && cap.Plugins.Share) {
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result).split(',')[1]);
+        r.onerror = () => rej(r.error);
+        r.readAsDataURL(blob);
+      });
+      const w = await cap.Plugins.Filesystem.writeFile({path: name, data: b64, directory: 'CACHE'});
+      await cap.Plugins.Share.share({title: name, url: w.uri});
+      return;
+    } catch (e) {
+      toast('Share failed: ' + ((e && e.message) || e));
+      return;
+    }
+  }
+  // 3) normal browser / Electron
+  const a = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  toast('✓ Download started');
+}
+
+async function download() {
   try {
-    const enc = new TextEncoder();
-    const list = files.map(f => ({name: f.name, data: enc.encode(f.content)}));
-    Object.keys(images).forEach(k => {
-      if (!get(k)) list.push({name: k, data: dataUrlBytes(images[k])});
-    });
-    const url = URL.createObjectURL(zip(list));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'website.zip';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-    toast('✓ Download started');
+    const f = get(cur);
+    if (f) f.content = src.value;
+    const entries = projectEntries();
+    await saveBlob(zipBlob(entries), 'website.zip');
   } catch (e) {
-    toast('Download failed: ' + e.message);
-    setLive(true);
-    addLog('e', 'Download failed: ' + e.message);
+    toast('Error: ' + e.message);
+    live.classList.add('err');
+    addLog('Download failed: ' + e.message, 'e');
   }
 }
 $('dl').onclick = download;
@@ -934,16 +1126,14 @@ rb.onclick = function () {
   cur = page = 'index.html';
   images = {};
   markDirty();
-  openFile(cur);
-  preview();
-  toast('✓ Reset. Press Save to keep it.');
+  open(cur);
+  run();
+  toast('Reset to starter project (press Save to keep it)');
 };
 
 // ====== UI CONTROLS ======
-$('saveb').onclick = saveProject;
-$('runb').onclick = run;
 $('cons').onclick = () => $('con').classList.toggle('off');
-$('clr').onclick = clearLog;
+$('clr').onclick = () => { resetLog(); };
 $('lay').onclick = () => {
   const s = $('app').classList.toggle('stack');
   $('lay').textContent = s ? 'Side by side' : 'Stack';
@@ -953,11 +1143,7 @@ $('theme').onclick = () => {
   const dk = getComputedStyle(root).getPropertyValue('--bg').trim() === '#15171b';
   const n = dk ? 'light' : 'dark';
   root.setAttribute('data-theme', n);
-  try { localStorage.setItem(THEME_KEY, n); } catch (e) {}
-};
-$('page').onchange = function () {
-  page = this.value;
-  preview();
+  try { localStorage.setItem('code-editor:v1:theme', n); } catch (e) {}
 };
 
 // ====== RESIZABLE PANES ======
@@ -967,6 +1153,7 @@ dv.addEventListener('pointerdown', (e) => {
   drag = true;
   dv.setPointerCapture(e.pointerId);
   out.style.pointerEvents = 'none';
+  e.preventDefault();
 });
 dv.addEventListener('pointermove', (e) => {
   if (!drag) return;
@@ -975,48 +1162,65 @@ dv.addEventListener('pointermove', (e) => {
   const p = v ? (e.clientY - r.top) / r.height : (e.clientX - r.left) / r.width;
   $('ed').style.flex = '0 0 ' + Math.max(0.15, Math.min(0.85, p)) * 100 + '%';
 });
-const endDrag = () => { drag = false; out.style.pointerEvents = ''; };
+function endDrag() { drag = false; out.style.pointerEvents = ''; editting = false; }
 dv.addEventListener('pointerup', endDrag);
 dv.addEventListener('pointercancel', endDrag);
 
+// ====== RESIZABLE CONSOLE (drag the bar above it) ======
+const con = $('con');
 const cdiv = $('con-divider');
 let cdrag = false;
-cdiv.addEventListener('pointerdown', (e) => { cdrag = true; cdiv.setPointerCapture(e.pointerId); });
+cdiv.addEventListener('pointerdown', (e) => {
+  cdrag = true;
+  cdiv.setPointerCapture(e.pointerId);
+  out.style.pointerEvents = 'none';
+  e.preventDefault();
+});
 cdiv.addEventListener('pointermove', (e) => {
   if (!cdrag) return;
-  const r = $('con').parentElement.getBoundingClientRect();
-  const p = (r.bottom - e.clientY) / r.height;
-  $('con').style.flex = '0 0 ' + Math.max(0.1, Math.min(0.8, p)) * 100 + '%';
+  const r = $('pv').getBoundingClientRect();
+  const maxH = Math.max(80, r.height - $('runbar').offsetHeight - 90);
+  const h = Math.max(60, Math.min(maxH, r.bottom - e.clientY));
+  con.style.height = h + 'px';
 });
-cdiv.addEventListener('pointerup', () => { cdrag = false; });
-cdiv.addEventListener('pointercancel', () => { cdrag = false; });
+function endCdrag() { cdrag = false; out.style.pointerEvents = ''; }
+cdiv.addEventListener('pointerup', endCdrag);
+cdiv.addEventListener('pointercancel', endCdrag);
+cdiv.addEventListener('dblclick', () => { con.style.height = ''; });
+
+// ====== PAGE SELECT ======
+$('page').onchange = function () {
+  page = this.value;
+  run();
+};
 
 // ====== LOAD FROM STORAGE ======
 try {
   const s = localStorage.getItem(KEY);
   if (s) {
     const p = JSON.parse(s);
-    if (p && Array.isArray(p.files) && p.files.length &&
-        p.files.every(f => f && typeof f.name === 'string' && typeof f.content === 'string')) {
+    if (p.files && p.files.length) {
       files = p.files;
       cur = p.cur;
       page = p.page;
-      images = p.images && typeof p.images === 'object' ? p.images : {};
+      images = p.images || {};
     }
   }
-  const t = localStorage.getItem(THEME_KEY);
+  const t = localStorage.getItem('code-editor:v1:theme');
   if (t) root.setAttribute('data-theme', t);
 } catch (e) {
-  console.error('Storage load error:', e);
+  /* storage unavailable: start with the starter project */
 }
 
-// ====== START ======
+// ====== INITIALIZE ======
 if (!get(cur)) cur = files[0].name;
 fixPage();
-openFile(cur);
+open(cur);
+run();
+updateHistBtns();
+setUse();
+setDirty(false);
 
-// The page preview renders on its own. JavaScript only runs when you press Run.
-preview();
 })();
 </script>
 </body>

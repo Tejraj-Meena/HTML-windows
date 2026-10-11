@@ -1,45 +1,75 @@
-const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
+const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 
+let mainWindow;
+
 function createWindow() {
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    backgroundColor: '#15171b',
-    autoHideMenuBar: true,
-    title: 'Code Editor',
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 800,
+    minHeight: 600,
     webPreferences: {
-      contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      contextIsolation: true,
+      enableRemoteModule: false,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
-  Menu.setApplicationMenu(null);
-  win.loadFile(path.join(__dirname, 'index.html'));
+  const indexPath = path.join(__dirname, 'index.html');
+  mainWindow.loadFile(indexPath);
 
-  // Ask before closing when there are unsaved changes
-  win.webContents.on('will-prevent-unload', (e) => {
-    const choice = dialog.showMessageBoxSync(win, {
-      type: 'question',
-      buttons: ['Leave without saving', 'Stay'],
-      defaultId: 1,
-      cancelId: 1,
-      title: 'Unsaved changes',
-      message: 'You have unsaved changes. Leave without saving?'
-    });
-    if (choice === 0) e.preventDefault(); // allow the window to close
+  mainWindow.on('closed', () => {
+    mainWindow = null;
   });
 
-  // External links open in the default browser, never inside the app
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/i.test(url)) shell.openExternal(url);
-    return { action: 'deny' };
-  });
-  win.webContents.on('will-navigate', (e, url) => {
-    if (!url.startsWith('file:')) e.preventDefault();
-  });
+  createMenu();
 }
 
-app.whenReady().then(createWindow);
-app.on('window-all-closed', () => app.quit());
+function createMenu() {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        { role: 'quit', label: 'Exit' }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
+app.on('ready', createWindow);
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (mainWindow === null) {
+    createWindow();
+  }
+});

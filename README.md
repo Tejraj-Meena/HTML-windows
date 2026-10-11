@@ -1,60 +1,50 @@
-# Code Editor
+# Code Editor - Windows Desktop App
 
-A small multi-file HTML/CSS/JS editor with live preview, loop protection and zip export, packaged as a Windows app with Electron.
+A full-featured HTML/CSS/JS code editor for Windows that installs via .exe
 
-## Folder layout
+## Features
 
-```
-code-editor/
-├── .github/workflows/build.yml   <- builds the exe on GitHub (hidden folder)
-├── workflow-build.yml            <- visible copy of the same file
-├── src/
-│   ├── index.html                <- the whole editor
-│   └── main.js                   <- Electron window
-├── package.json
-├── build.bat
-└── README.md
-```
+- Multi-file editing (HTML, CSS, JS)
+- Import multiple files at once
+- Undo/Redo functionality
+- Auto-closing tags
+- Live preview with images
+- Download projects as ZIP
+- Dark mode support
+- Works offline
 
-## If `.github` is missing after you unzip or upload
+## Installation
 
-Folders that start with a dot are hidden on some systems and skipped by some uploaders. Fix:
+### Option 1: Download Pre-built Installer (Easiest)
+1. Go to Releases
+2. Download `CodeEditor-Setup-1.0.0.exe`
+3. Run the installer
+4. Follow the wizard
+5. Launch from Start Menu
 
-1. In your GitHub repo click **Add file → Create new file**.
-2. In the name box type `.github/workflows/build.yml` (typing the slashes creates the folders).
-3. Paste the contents of `workflow-build.yml` and commit.
+### Option 2: Build on GitHub
+1. Push to GitHub
+2. Go to Actions tab
+3. Click "Build Windows EXE"
+4. Click "Run workflow"
+5. Wait 10 minutes for build
+6. Download from Artifacts
 
-## Get the exe from GitHub (no setup on your PC)
+### Option 3: Build on Your Computer
+1. Install Node.js from nodejs.org
+2. Open Command Prompt in this folder
+3. Run: `npm install`
+4. Run: `npm run build`
+5. Find .exe in `dist/` folder
 
-1. Upload everything to a new GitHub repo.
-2. Open the **Actions** tab. **Build Windows EXE** runs on every push to `main`, or start it with **Run workflow**.
-3. When it finishes, download **Code-Editor-exe** under **Artifacts** and unzip it.
+## Usage
 
-For a Release with the exe attached:
+1. Launch the app
+2. Use 📄 HTML, 🎨 CSS, ⚙️ JS, 🖼️ Images buttons to import files
+3. Edit code in the left panel
+4. See live preview on the right
+5. Click Download to save your project
 
-```
-git tag v1.0.0
-git push origin v1.0.0
-```
+## License
 
-## Build locally
-
-```
-npm install
-npm run build            # portable exe -> dist/Code-Editor.exe
-npm run build:installer  # installer    -> dist/Code-Editor-Setup.exe
-npm start                # run without building
-```
-
-## Preview and console
-
-The page (HTML and CSS) updates automatically as you type. JavaScript does not run until you press **▶ Run** (or Ctrl+Enter), and console output only appears after a Run.
-
-## Saving
-
-There is no auto save. Press **💾 Save** (or Ctrl+S) to store your project in the app. A dot next to Save means you have unsaved changes, and the app asks before closing. **Download** exports your site as `website.zip`.
-
-## Notes
-
-- Saved projects live in the app's local storage (`%APPDATA%\Code Editor`).
-- The exe is unsigned, so Windows SmartScreen may warn on first run. Click **More info**, then **Run anyway**.
+MIT
