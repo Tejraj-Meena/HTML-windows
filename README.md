@@ -40,7 +40,7 @@ A full-featured HTML/CSS/JS code editor for Windows that installs via .exe
 ## Usage
 
 1. Launch the app
-2. Use ðŸ“„ HTML, ðŸŽ¨ CSS, âš™ï¸ JS, ðŸ–¼ï¸ Images buttons to import files
+2. Use 📄 HTML, 🎨 CSS, ⚙️ JS, 🖼️ Images buttons to import files
 3. Edit code in the left panel
 4. See live preview on the right
 5. Click Download to save your project
