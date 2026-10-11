@@ -470,6 +470,20 @@ function guardLoops(code) {
       while (j < n && isId(code[j])) j++;
       const w = code.slice(i, j);
       const before = last;
+      if (w === 'location') {
+        const rest = code.slice(j, j + 40);
+        const assign = /^\s*=(?![=>])/.test(rest);
+        if (assign || /^\s*\.\s*(href|assign|replace|reload)\b/.test(rest)) {
+          const pref = out.match(/(?:^|[^\w$.])((?:window|self|globalThis|document)\s*\.\s*)$/);
+          const decl = /\b(?:let|const|var|function|class)\s*$/.test(out);
+          if (!decl && (before !== '.' || pref)) {
+            if (pref) out = out.slice(0, out.length - pref[1].length);
+            out += assign ? '__L.href' : '__L';
+            i = j; last = 'a';
+            continue;
+          }
+        }
+      }
       out += w; i = j; last = 'a';
       if (before === '.') continue;
       if (w === 'for' || w === 'while') {
@@ -566,6 +580,31 @@ function hookFn() {
     }
   };
 
+  // location.href = "page.html" / location.assign() / replace() / reload()  (calls are rewritten to __L at build time)
+  function go(v) {
+    v = String(v);
+    if (/^#/.test(v)) { try { location.hash = v; } catch (x) {} return; }
+    if (/^(https?:)?\/\//i.test(v)) { try { realOpen.call(window, v, '_blank'); } catch (x) {} return; }
+    post('nav', v);
+  }
+  window.__L = {
+    get href() { return location.href; },
+    set href(v) { go(v); },
+    assign: function (v) { go(v); },
+    replace: function (v) { go(v); },
+    reload: function () { post('reload', ''); },
+    toString: function () { return location.href; }
+  };
+
+  // <form action="page.html"> -> switch preview page
+  document.addEventListener('submit', function (e) {
+    if (e.defaultPrevented) return;
+    var f = e.target, a = f && f.getAttribute ? f.getAttribute('action') : null;
+    if (!a || /^(#|javascript:|mailto:)/i.test(a) || /^(https?:)?\/\//i.test(a)) return;
+    e.preventDefault();
+    post('nav', a);
+  });
+
   // window.open("page.html") -> switch preview page
   window.open = function (u) {
     u = String(u == null ? '' : u);
@@ -615,6 +654,12 @@ function imgData(p) {
   return images[base] || null;
 }
 
+function locFix(c) {
+  return c
+    .replace(/(?<![\w$.])(?:(?:window|self|document)\s*\.\s*)?location\s*\.\s*(href|assign|replace|reload)\b/g, '__L.$1')
+    .replace(/(?<![\w$.])(?:(?:window|self|document)\s*\.\s*)?location\s*=(?![=>])/g, '__L.href=');
+}
+
 function inlineImagesInJs(code) {
   Object.keys(images).forEach((k) => {
     const re = new RegExp('(["\'])(?:\\.?\\/)?(?:[\\w.-]+\\/)*' + esc(k) + '\\1', 'g');
@@ -653,6 +698,9 @@ function build(name, hook) {
     const d = imgData(p);
     return d ? 'url(' + q + d + q + ')' : m;
   });
+
+  // Inline handlers: onclick="location.href='about.html'"
+  h = h.replace(/(\son[a-z]+\s*=\s*)(["'])([\s\S]*?)\2/gi, (m, a, q, body) => a + q + locFix(body) + q);
 
   // Scripts: inline project files, guard loops in all JS
   h = h.replace(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi, (t, attrs, body) => {
@@ -738,6 +786,7 @@ window.addEventListener('message', (e) => {
   if (!d || !d.__ce || e.source !== out.contentWindow) return;
 
   if (d.t === 'capped') { capHit(); return; }
+  if (d.t === 'reload') { run(); return; }
 
   if (d.t === 'nav') {
     let n = norm(d.m);
