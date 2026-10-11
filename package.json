@@ -1,0 +1,24 @@
+{
+  "name": "code-editor",
+  "version": "1.0.0",
+  "description": "Code Editor",
+  "main": "src/main.js",
+  "author": "You",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable --publish never",
+    "build:installer": "electron-builder --win nsis --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.local.codeeditor",
+    "productName": "Code Editor",
+    "files": ["src/**/*"],
+    "win": { "target": ["portable"] },
+    "portable": { "artifactName": "Code-Editor.exe" },
+    "nsis": { "artifactName": "Code-Editor-Setup.exe" }
+  }
+}
